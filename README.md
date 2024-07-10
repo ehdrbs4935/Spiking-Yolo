@@ -48,7 +48,7 @@ Each time data is feded into the model, it prints the following items for each l
     ```math
     FLOPs(l) = \begin{cases}
         ks^2 \times M^2_{out} \times C_{in} \times C_{out} & \text{Conv} \\
-        C_{in} \times M^2{in} & \text{BN or AP} \\
+        C_{in} \times M^2_{in} & \text{BN or AP} \\
         N_{in} \times N_{out} & \text{FC}
       \end{cases}
     ```
