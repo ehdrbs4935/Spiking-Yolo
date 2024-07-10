@@ -149,7 +149,7 @@ class SPPF(nn.Module):
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c_ * 4, c2, 1, 1)
         self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
-        self.calculation = True
+        self.calculation = False
 
     def forward(self, x):
       if self.calculation == True:
@@ -244,10 +244,10 @@ class C2f(nn.Module):
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.caculation = True
+        self.calculation = False
 
     def forward(self, x):
-        if self.caculation == True:
+        if self.calculation == True:
           print("#=====C2f Block=====#")
         """Forward pass through C2f layer."""
         y = list(self.cv1(x).chunk(2, 1))
@@ -272,7 +272,7 @@ class SC2f(nn.Module):
         self.cv1 = SConv(c1, 2 * self.c, 1, 1)
         self.cv2 = SConv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(SBottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.calculation = True
+        self.calculation = False
 
     def forward(self, x):
         if self.calculation == True:
@@ -300,7 +300,7 @@ class SC2f_spike(nn.Module):
     self.cv2 = SConv_spike((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
     self.m = nn.ModuleList(
       SBottleneck_spike(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-    self.calculation = True
+    self.calculation = False
   def forward(self, x):
     if self.calculation == True:
       print("#=====SC2f_spike Block=====#")
@@ -437,10 +437,10 @@ class Bottleneck(nn.Module):
         self.cv1 = Conv(c1, c_, k[0], 1)
         self.cv2 = Conv(c_, c2, k[1], 1, g=g)
         self.add = shortcut and c1 == c2
-        self.caculation = True
+        self.calculation = False
 
     def forward(self, x):
-        if self.caculation == True:
+        if self.calculation == True:
           print("#=====Bottleneck Block=====#")
         """'forward()' applies the YOLO FPN to input data."""
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
@@ -457,7 +457,7 @@ class SBottleneck(nn.Module):
         self.cv1 = SConv(c1, c_, k[0], 1)
         self.cv2 = SConv(c_, c2, k[1], 1, g=g)
         self.add = shortcut and c1 == c2
-        self.calculation = True
+        self.calculation = False
 
     def forward(self, x):
         if self.calculation == True:
@@ -477,7 +477,7 @@ class SBottleneck_spike(nn.Module):
     self.cv1 = SConv_spike(c1, c_, k[0], 1)
     self.cv2 = SConv_spike(c_, c2, k[1], 1, g=g)
     self.add = shortcut and c1 == c2
-    self.calculation = True
+    self.calculation = False
 
   def forward(self, x):
     if self.calculation == True:
@@ -569,7 +569,7 @@ class Upsample(Module):
     self.mode = mode
     self.align_corners = align_corners
     self.recompute_scale_factor = recompute_scale_factor
-    self.calculation = True
+    self.calculation = False
 
   def forward(self, input: Tensor) -> Tensor:
     output = F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners,

@@ -39,7 +39,7 @@ class Conv(nn.Module):
         self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
-        self.calculation = True
+        self.calculation = False
 
     def forward(self, x):
 
@@ -90,7 +90,7 @@ class SConv(nn.Module):
         else:
             raise ValueError("Non defined neuron")
 
-        self.calculation = True
+        self.calculation = False
 
     def forward(self, x):
       spk_rec = []
@@ -404,7 +404,7 @@ class Concat(nn.Module):
         """Concatenates a list of tensors along a specified dimension."""
         super().__init__()
         self.d = dimension
-        self.calculation = True
+        self.calculation = False
 
     def forward(self, x):
       if self.calculation == True:
@@ -437,12 +437,12 @@ class SConv_spike(nn.Module):
 
     self.timestep = int(variables['time-step'])
 
-    self.calculation = True
+    self.calculation = False
 
   def forward(self, x):
     if self.calculation == True:
       print("#=====SConv_spike Block=====#")
-    mem_conv = self.lif_conv.init_leaky()  # reset/init hidden states at t=0
+    # mem_conv = self.lif_conv.init_leaky()  # reset/init hidden states at t=0
     mem_bn = self.lif_bn.init_leaky()
     spk_rec = []  # record output spikes
     mem_rec = []  # record output hidden states
@@ -463,7 +463,7 @@ class SConv_spike(nn.Module):
         # lif_conv(Leaky) 계층 연산 횟수 측정
         # lif_conv_syops = Leaky_syops_counter_hook(self.lif_conv, cur_conv, "sconv_lif_conv")
         # bn 계층 연산 횟수 측정
-        bn_syops = bn_syops_counter_hook(self.bn, spk_conv, cur_bn, "sconv_bn")
+        bn_syops = bn_syops_counter_hook(self.bn, cur_conv, cur_bn, "sconv_bn")
         # lif_bn(Leaky) 계층 연산 횟수 측정
         lif_bn_syops = Leaky_syops_counter_hook(self.lif_conv, cur_bn, "sconv_lif_bn")
 
