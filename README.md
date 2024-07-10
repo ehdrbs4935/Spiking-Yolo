@@ -35,11 +35,15 @@
     ※ `/nn/modules/block.py` : SBottleneck, SC2f, SSPPF, SBottleneck_spike, SC2f_spike
 
 ### Updates for FLOPS calculation
-We add the `/nn/modules/calculator.py` file to calculate the number of FLOPS for each layer.  
+We add the `/nn/modules/calculator.py` file to calculate the number of FLOPS for each layer. 
+
 Each time data is feded into the model, it prints the following items for each layer.
 * **Wheter the input data is spikes**
 * **Spike firing rate of input data**
-* **the number of FLOPS**
+* **the number of FLOPS**  
+  ※ Reference : Efficient Federated Learning with Spike Neural Networks for Traffic Sign Recognition
+(https://arxiv.org/abs/2205.14315)
+
   * CNN
     ```math
     FLOPs(l) = \begin{cases}
@@ -58,7 +62,6 @@ Each time data is feded into the model, it prints the following items for each l
     ```math
     FLOPs(l)_{SNN} = FLOPs(l) \times R_s(l) \times T
     ```
-  ※ Reference : Efficient Federated Learning with Spike Neural Networks for Traffic Sign Recognition
-(https://arxiv.org/abs/2205.14315)
+ 
 
 
