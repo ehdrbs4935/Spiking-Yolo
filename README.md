@@ -68,7 +68,7 @@ Each time data is feded into the model, it prints the following items for each l
 You can set up the model by writing a YAML file in diriectory `/cfg/models/v8`.  
 The YAML file contains the layers that configure the model, as shown below.  
 
-* **yolov8.yaml**
+* **yolov8.yaml (YOLOv8n - ANN)**
   ```yaml
   # Ultralytics YOLO 🚀, AGPL-3.0 license
   # YOLOv8 object detection model with P3-P5 outputs. For Usage examples see https://docs.ultralytics.com/tasks/detect
@@ -118,7 +118,7 @@ The YAML file contains the layers that configure the model, as shown below.
     - [[15, 18, 21], 1, Detect, [nc]]  # Detect(P3, P4, P5)
   ```
   
-* **yolov8_11.yaml**
+* **yolov8_11.yaml (SConv_spike, SC2f_spike)**
   ```yaml
   # Ultralytics YOLO 🚀, AGPL-3.0 license
   # YOLOv8 object detection model with P3-P5 outputs. For Usage examples see https://docs.ultralytics.com/tasks/detect
@@ -159,11 +159,19 @@ The YAML file contains the layers that configure the model, as shown below.
   
     - [-1, 1, SConv_spike, [256, 3, 2]]
     - [[-1, 12], 1, Concat, [1]]  # cat head P4
-    - [-1, 3, SC2f_spike, [512]]  # 18 (P4/16-medium)
+    - [-1, 3, SC2f_spike, [512, [None, [0, None], None]]  # 18 (P4/16-medium)
   
     - [-1, 1, SConv_spike, [512, 3, 2]]
     - [[-1, 9], 1, Concat, [1]]  # cat head P5
-    - [-1, 3, SC2f_spike, [1024]]  # 21 (P5/32-large)
+    - [-1, 3, SC2f_spike, [1024, [None, [0, 1], 1]  # 21 (P5/32-large)
   
     - [[15, 18, 21], 1, Detect, [nc]]  # Detect(P3, P4, P5)
   ```
+
+  **<"args" of the 'SC2f_spike' module>**
+    * **args[0]** : the number of output channels
+    * **args[1]** : the list storing the numbers of **'Conv'** modules to be converted into spike layers
+      
+      * The list inside the args[1] stores the numbers of **'Conv'** layers in the **'SBottleneck_spike'** module.
+      * If you want to convert **'Conv'** module to **'SConv_spike'** module, write the number of module.
+      * Otherwise, write **'None'**.
