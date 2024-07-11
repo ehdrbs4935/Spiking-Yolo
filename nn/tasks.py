@@ -704,6 +704,9 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             if m in (BottleneckCSP, C1, C2, C2f, SC2f, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
+            if m == SC2f_spike:
+              args.insert(3, n)
+              n = 1
         elif m is AIFI:
             args = [ch[f], *args]
         elif m in (HGStem, HGBlock):
