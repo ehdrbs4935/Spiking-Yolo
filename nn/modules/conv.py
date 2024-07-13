@@ -33,13 +33,13 @@ class Conv(nn.Module):
     default_act = nn.SiLU()  # default activation
     #default_act = nn.ReLU()
 
-    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
+    def __init__(self, c1, c2, k=1, s=1, calculation=False, p=None, g=1, d=1, act=True):
         """Initialize Conv layer with given arguments including activation."""
         super().__init__()
         self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
-        self.calculation = False
+        self.calculation = calculation
 
     def forward(self, x):
 
@@ -416,7 +416,7 @@ class Concat(nn.Module):
 class SConv_spike(nn.Module):
   """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
 
-  def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
+  def __init__(self, c1, c2, k=1, s=1, calculation=False ,p=None, g=1, d=1, act=True):
     """Initialize Conv layer with given arguments including activation."""
     super().__init__()
     self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
@@ -437,7 +437,7 @@ class SConv_spike(nn.Module):
 
     self.timestep = int(variables['time-step'])
 
-    self.calculation = False
+    self.calculation = calculation
 
   def forward(self, x):
     if self.calculation == True:
@@ -465,7 +465,7 @@ class SConv_spike(nn.Module):
         # bn 계층 연산 횟수 측정
         bn_syops = bn_syops_counter_hook(self.bn, cur_conv, cur_bn, "sconv_bn")
         # lif_bn(Leaky) 계층 연산 횟수 측정
-        lif_bn_syops = Leaky_syops_counter_hook(self.lif_conv, cur_bn, "sconv_lif_bn")
+        lif_bn_syops = Leaky_syops_counter_hook(self.lif_bn, cur_bn, "sconv_lif_bn")
 
       spk_rec.append(spk_bn)  # record spikes
       mem_rec.append(mem_bn)  # record membrane
