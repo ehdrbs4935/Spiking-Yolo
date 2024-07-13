@@ -118,7 +118,7 @@ The YAML file contains the layers that configure the model, as shown below.
     - [[15, 18, 21], 1, Detect, [nc]]  # Detect(P3, P4, P5)
   ```
   
-* **yolov8_11.yaml (SConv_spike, SC2f_spike)**
+* **yolov8_12.yaml (SConv_spike, SC2f_spike)**
   ```yaml
   # Ultralytics YOLO 🚀, AGPL-3.0 license
   # YOLOv8 object detection model with P3-P5 outputs. For Usage examples see https://docs.ultralytics.com/tasks/detect
@@ -136,20 +136,20 @@ The YAML file contains the layers that configure the model, as shown below.
   # YOLOv8.0n backbone
   backbone:
     # [from, repeats, module, args]
-    - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
+    - [-1, 1, Conv, [64, 3, 2, True]]  # 0-P1/2
     - [-1, 1, Conv, [128, 3, 2]]  # 1-P2/4
-    - [-1, 3, C2f, [128, True]]
+    - [-1, 3, C2f, [128, True, True]]
     - [-1, 1, Conv, [256, 3, 2]]  # 3-P3/8
     - [-1, 6, C2f, [256, True]]
     - [-1, 1, Conv, [512, 3, 2]]  # 5-P4/16
     - [-1, 6, C2f, [512, True]]
     - [-1, 1, Conv, [1024, 3, 2]]  # 7-P5/32
     - [-1, 3, C2f, [1024, True]]
-    - [-1, 1, SPPF, [1024, 5]]  # 9
+    - [-1, 1, SPPF, [1024, 5, True]]  # 9
   
   # YOLOv8.0n head
   head:
-    - [-1, 1, nn.Upsample, [None, 2, 'nearest']]
+    - [-1, 1, Upsample, [None, 2, 'nearest', True]]
     - [[-1, 6], 1, Concat, [1]]  # cat backbone P4
     - [-1, 3, C2f, [512]]  # 12
   
@@ -157,21 +157,51 @@ The YAML file contains the layers that configure the model, as shown below.
     - [[-1, 4], 1, Concat, [1]]  # cat backbone P3
     - [-1, 3, C2f, [256]]  # 15 (P3/8-small)
   
-    - [-1, 1, SConv_spike, [256, 3, 2]]
+    - [-1, 1, SConv_spike, [256, 3, 2, True]]
     - [[-1, 12], 1, Concat, [1]]  # cat head P4
-    - [-1, 3, SC2f_spike, [512, [None, [0, None], None]]  # 18 (P4/16-medium)
+    - [-1, 3, SC2f_spike, [512, [None, [0, None], None]]]  # 18 (P4/16-medium)
   
     - [-1, 1, SConv_spike, [512, 3, 2]]
     - [[-1, 9], 1, Concat, [1]]  # cat head P5
-    - [-1, 3, SC2f_spike, [1024, [None, [0, 1], 1]  # 21 (P5/32-large)
+    - [-1, 3, SC2f_spike, [1024,[None, [0, 1], 1], False, True]]  # 21 (P5/32-large)
   
     - [[15, 18, 21], 1, Detect, [nc]]  # Detect(P3, P4, P5)
   ```
 
-  **<"args" of the 'SC2f_spike' module>**
-    * **args[0]** : the number of output channels
-    * **args[1]** : the list storing the numbers of **'Conv'** modules to be converted into spike layers
-      
-      * The list inside the args[1] stores the numbers of **'Conv'** layers in the **'SBottleneck_spike'** module.
-      * If you want to convert **'Conv'** module to **'SConv_spike'** module, write the number of module.
-      * Otherwise, write **'None'**.
+  **<"args" of the modules>**
+    * **Conv**
+      * **args[0]** : the number of output channels
+      * **args[1]** : kernel size (Default=1)
+      * **args[2]** : stride size (Default=1)
+      * **args[3]** : calculation (Default=False) : 'Whether or not to count FLOPS at that layer'
+        
+    * **C2f**
+      * **args[0]** : the number of output channels
+      * **args[1]** : shortcut (Default=False)
+      * **args[2]** : calculation (Default=False)
+        
+    * **SPPF**
+      * **args[0]** : the number of output channels
+      * **args[1]** : kernel size of 'Maxpool2d' layer (Default=5)
+      * **args[2]** : calculation (Default=False)
+        
+    * **Upsample**
+      * **args[0]** : size (Default=None)
+      * **args[1]** : scale factor (Default=None)
+      * **args[2]** : mode (Default='nearest')
+      * **args[3]** : calculation (Default=False)
+        
+    * **SConv_spike**
+      * **args[0]** : the number of output channels
+      * **args[1]** : kernel size (Default=1)
+      * **args[2]** : stride size (Default=1)
+      * **args[3]** : calculation (Default=False)
+        
+    * **SC2f_spike**
+      * **args[0]** : the number of output channels
+      * **args[1]⭐️** : the list storing the numbers of **'Conv'** modules to be converted into spike layers
+        * The list inside the args[1] stores the numbers of **'Conv'** layers in the **'SBottleneck_spike'** module.
+        * If you want to convert **'Conv'** module to **'SConv_spike'** module, write the number of module.
+        * Otherwise, write **'None'**.
+      * **args[2]** : shortcut (Default=False)
+      * **args[3]** : calculation (Default=False)
