@@ -138,7 +138,7 @@ class SPP(nn.Module):
 class SPPF(nn.Module):
     """Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher."""
 
-    def __init__(self, c1, c2, k=5):
+    def __init__(self, c1, c2, k=5, calculation=False):
         """
         Initializes the SPPF layer with given input/output channels and kernel size.
 
@@ -146,10 +146,10 @@ class SPPF(nn.Module):
         """
         super().__init__()
         c_ = c1 // 2  # hidden channels
-        self.cv1 = Conv(c1, c_, 1, 1)
-        self.cv2 = Conv(c_ * 4, c2, 1, 1)
+        self.cv1 = Conv(c1, c_, 1, 1, calculation)
+        self.cv2 = Conv(c_ * 4, c2, 1, 1, calculation)
         self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
-        self.calculation = False
+        self.calculation = calculation
 
     def forward(self, x):
       if self.calculation == True:
@@ -235,16 +235,16 @@ class C2(nn.Module):
 class C2f(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):
+    def __init__(self, c1, c2, n=1, shortcut=False, calculation=False ,g=1, e=0.5):
         """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
         expansion.
         """
         super().__init__()
         self.c = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.calculation = False
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1, calculation)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, calculation ,g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
+        self.calculation = calculation
 
     def forward(self, x):
         if self.calculation == True:
@@ -290,7 +290,7 @@ class SC2f(nn.Module):
 
 class SC2f_spike(nn.Module):
   """Faster Implementation of CSP Bottleneck with 2 convolutions."""
-  def __init__(self, c1, c2, spk_conv_li ,n=1, shortcut=False, g=1, e=0.5):
+  def __init__(self, c1, c2, spk_conv_li ,n=1, shortcut=False, calculation=False ,g=1, e=0.5):
     """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
     expansion.
     """
@@ -300,24 +300,24 @@ class SC2f_spike(nn.Module):
     # Conversion of first conv layer
     if 0 in spk_conv_li:
       print("SC2f_spike-1 : SConv_spike")
-      self.cv1 = SConv_spike(c1, 2 * self.c, 1, 1)
+      self.cv1 = SConv_spike(c1, 2 * self.c, 1, 1, calculation)
     else:
       print("SC2f_spike-1 : Conv")
-      self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+      self.cv1 = Conv(c1, 2 * self.c, 1, 1, calculation)
 
     # Conversion of last conv layer
     if 1 in spk_conv_li:
       print("SC2f_spike-2 : SConv_spike")
-      self.cv2 = SConv_spike((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+      self.cv2 = SConv_spike((2 + n) * self.c, c2, 1, 1, calculation)  # optional act=FReLU(c2)
     else:
       print("SC2f_spike-2 : Conv")
-      self.cv2 = Conv((2 + n) * self.c, c2, 1)
+      self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation)
 
     # Conversion of Bottleneck's conv layers
     self.m = nn.ModuleList(
-      SBottleneck_spike(self.c, self.c, spk_conv_li[j+1] ,shortcut, g, k=((3, 3), (3, 3)), e=1.0) for j in range(n))
+      SBottleneck_spike(self.c, self.c, spk_conv_li[j+1] ,shortcut, calculation ,g, k=((3, 3), (3, 3)), e=1.0) for j in range(n))
 
-    self.calculation = False
+    self.calculation = calculation
 
   def forward(self, x):
     if self.calculation == True:
@@ -446,16 +446,16 @@ class GhostBottleneck(nn.Module):
 class Bottleneck(nn.Module):
     """Standard bottleneck."""
 
-    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3), e=0.5):
+    def __init__(self, c1, c2, shortcut=True, calculation=False ,g=1, k=(3, 3), e=0.5):
         """Initializes a bottleneck module with given input/output channels, shortcut option, group, kernels, and
         expansion.
         """
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, c_, k[0], 1)
-        self.cv2 = Conv(c_, c2, k[1], 1, g=g)
+        self.cv1 = Conv(c1, c_, k[0], 1, calculation)
+        self.cv2 = Conv(c_, c2, k[1], 1, calculation ,g=g)
         self.add = shortcut and c1 == c2
-        self.calculation = False
+        self.calculation = calculation
 
     def forward(self, x):
         if self.calculation == True:
@@ -466,16 +466,16 @@ class Bottleneck(nn.Module):
 class SBottleneck(nn.Module):
     """Standard bottleneck."""
 
-    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3), e=0.5):
+    def __init__(self, c1, c2, shortcut=True ,g=1, k=(3, 3), e=0.5):
         """Initializes a bottleneck module with given input/output channels, shortcut option, group, kernels, and
         expansion.
         """
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = SConv(c1, c_, k[0], 1)
-        self.cv2 = SConv(c_, c2, k[1], 1, g=g)
+        self.cv2 = SConv(c_, c2, k[1], 1 ,g=g)
         self.add = shortcut and c1 == c2
-        self.calculation = False
+        self.calculation = calculation
 
     def forward(self, x):
         if self.calculation == True:
@@ -486,7 +486,7 @@ class SBottleneck(nn.Module):
 class SBottleneck_spike(nn.Module):
   """Standard bottleneck."""
 
-  def __init__(self, c1, c2, spk_conv_li ,shortcut=True, g=1, k=(3, 3), e=0.5):
+  def __init__(self, c1, c2, spk_conv_li ,shortcut=True, calculation=False ,g=1, k=(3, 3), e=0.5):
     """Initializes a bottleneck module with given input/output channels, shortcut option, group, kernels, and
     expansion.
     """
@@ -496,21 +496,21 @@ class SBottleneck_spike(nn.Module):
     # Conversion of first conv layer
     if 0 in spk_conv_li:
       print("SBottleneck_spike-1 : SConv_spike")
-      self.cv1 = SConv_spike(c1, c_, k[0], 1)
+      self.cv1 = SConv_spike(c1, c_, k[0], 1, calculation)
     else:
       print("SBottleneck_spike-1 : Conv")
-      self.cv1 = Conv(c1, c_, k[0], 1)
+      self.cv1 = Conv(c1, c_, k[0], 1, calculation)
 
     # Conversion of last conv layer
     if 1 in spk_conv_li:
       print("SBottleneck_spike-2 : SConv_spike")
-      self.cv2 = SConv_spike(c_, c2, k[1], 1, g=g)
+      self.cv2 = SConv_spike(c_, c2, k[1], 1, calculation, g=g)
     else:
       print("SBottleneck_spike-2 : Conv")
-      self.cv2 = Conv(c_, c2, k[1], 1, g=g)
+      self.cv2 = Conv(c_, c2, k[1], 1, calculation, g=g)
 
     self.add = shortcut and c1 == c2
-    self.calculation = False
+    self.calculation = calculation
 
   def forward(self, x):
     if self.calculation == True:
@@ -590,7 +590,7 @@ class Upsample(Module):
   recompute_scale_factor: Optional[bool]
 
   def __init__(self, size: Optional[_size_any_t] = None, scale_factor: Optional[_ratio_any_t] = None,
-               mode: str = 'nearest', align_corners: Optional[bool] = None,
+               mode: str = 'nearest', calculation=False, align_corners: Optional[bool] = None,
                recompute_scale_factor: Optional[bool] = None) -> None:
     super().__init__()
     self.name = type(self).__name__
@@ -602,7 +602,7 @@ class Upsample(Module):
     self.mode = mode
     self.align_corners = align_corners
     self.recompute_scale_factor = recompute_scale_factor
-    self.calculation = False
+    self.calculation = calculation
 
   def forward(self, input: Tensor) -> Tensor:
     output = F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners,
