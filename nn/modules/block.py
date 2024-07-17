@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, SConv, SConv_spike
+from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, SConv, SConv_spike, SConv_AT
 from .transformer import TransformerBlock
 
 from ultralytics.nn.modules.calculator import pool_syops_counter_hook, upsample_syops_counter_hook
@@ -272,11 +272,11 @@ class SC2f(nn.Module):
         self.cv1 = SConv(c1, 2 * self.c, 1, 1)
         self.cv2 = SConv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(SBottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.calculation = False
+        #self.calculation = False
 
     def forward(self, x):
-        if self.calculation == True:
-          print("#=====SC2f Block=====#")
+        #if self.calculation == True:
+          #print("#=====SC2f Block=====#")
         """Forward pass through C2f layer."""
         y = list(self.cv1(x).chunk(2, 1))
         y.extend(m(y[-1]) for m in self.m)
@@ -333,6 +333,50 @@ class SC2f_spike(nn.Module):
     y.extend(m(y[-1]) for m in self.m)
     return self.cv2(torch.cat(y, 1))
 
+class SC2f_AT(nn.Module):
+  """Faster Implementation of CSP Bottleneck with 2 convolutions."""
+  def __init__(self, c1, c2, spk_conv_li ,n=1, shortcut=False, calculation=False ,g=1, e=0.5):
+    """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
+    expansion.
+    """
+    super().__init__()
+    self.c = int(c2 * e)  # hidden channels
+
+    # Conversion of first conv layer
+    if 0 in spk_conv_li:
+      print("SC2f_spike-1 : SConv_AT")
+      self.cv1 = SConv_AT(c1, 2 * self.c, 1, 1, calculation)
+    else:
+      print("SC2f_spike-1 : Conv")
+      self.cv1 = Conv(c1, 2 * self.c, 1, 1, calculation)
+
+    # Conversion of last conv layer
+    if 1 in spk_conv_li:
+      print("SC2f_spike-2 : SConv_AT")
+      self.cv2 = SConv_AT((2 + n) * self.c, c2, 1, 1, calculation)  # optional act=FReLU(c2)
+    else:
+      print("SC2f_spike-2 : Conv")
+      self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation)
+
+    # Conversion of Bottleneck's conv layers
+    self.m = nn.ModuleList(
+      SBottleneck_AT(self.c, self.c, spk_conv_li[j+1] ,shortcut, calculation ,g, k=((3, 3), (3, 3)), e=1.0) for j in range(n))
+
+    self.calculation = calculation
+
+  def forward(self, x):
+    if self.calculation == True:
+      print("#=====SC2f_spike Block=====#")
+    """Forward pass through C2f layer."""
+    y = list(self.cv1(x).chunk(2, 1))
+    y.extend(m(y[-1]) for m in self.m)
+    return self.cv2(torch.cat(y, 1))
+
+  def forward_split(self, x):
+    """Forward pass using split() instead of chunk()."""
+    y = list(self.cv1(x).split((self.c, self.c), 1))
+    y.extend(m(y[-1]) for m in self.m)
+    return self.cv2(torch.cat(y, 1))
 
 
 class rohC2f(nn.Module):
@@ -475,11 +519,11 @@ class SBottleneck(nn.Module):
         self.cv1 = SConv(c1, c_, k[0], 1)
         self.cv2 = SConv(c_, c2, k[1], 1 ,g=g)
         self.add = shortcut and c1 == c2
-        self.calculation = calculation
+        #self.calculation = calculation
 
     def forward(self, x):
-        if self.calculation == True:
-          print("#=====SBottleneck=====#")
+        #if self.calculation == True:
+        #  print("#=====SBottleneck=====#")
         """'forward()' applies the YOLO FPN to input data."""
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
@@ -518,6 +562,40 @@ class SBottleneck_spike(nn.Module):
     """'forward()' applies the YOLO FPN to input data."""
     return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
+class SBottleneck_AT(nn.Module):
+  """Standard bottleneck."""
+
+  def __init__(self, c1, c2, spk_conv_li ,shortcut=True, calculation=False ,g=1, k=(3, 3), e=0.5):
+    """Initializes a bottleneck module with given input/output channels, shortcut option, group, kernels, and
+    expansion.
+    """
+    super().__init__()
+    c_ = int(c2 * e)  # hidden channels
+
+    # Conversion of first conv layer
+    if 0 in spk_conv_li:
+      print("SBottleneck_spike-1 : SConv_AT")
+      self.cv1 = SConv_AT(c1, c_, k[0], 1, calculation)
+    else:
+      print("SBottleneck_spike-1 : Conv")
+      self.cv1 = Conv(c1, c_, k[0], 1, calculation)
+
+    # Conversion of last conv layer
+    if 1 in spk_conv_li:
+      print("SBottleneck_spike-2 : SConv_spike")
+      self.cv2 = SConv_AT(c_, c2, k[1], 1, calculation, g=g)
+    else:
+      print("SBottleneck_spike-2 : Conv")
+      self.cv2 = Conv(c_, c2, k[1], 1, calculation, g=g)
+
+    self.add = shortcut and c1 == c2
+    self.calculation = calculation
+
+  def forward(self, x):
+    if self.calculation == True:
+      print("#=====SBottleneck_spike Block=====#")
+    """'forward()' applies the YOLO FPN to input data."""
+    return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
 class BottleneckCSP(nn.Module):
     """CSP Bottleneck https://github.com/WongKinYiu/CrossStagePartialNetworks."""

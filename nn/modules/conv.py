@@ -14,9 +14,10 @@ import snntorch as snn
 from snntorch import spikegen
 
 from ultralytics.nn.modules.calculator import conv_syops_counter_hook, bn_syops_counter_hook, pool_syops_counter_hook, Leaky_syops_counter_hook, silu_flops_counter_hook,IF_syops_counter_hook
+from ultralytics.nn.modules.neuron import AdaptiveIFNode, AdaptiveLIFNode
 
 __all__ = ('Conv', 'SConv', 'Conv2', 'LightConv', 'DWConv', 'DWConvTranspose2d', 'ConvTranspose', 'Focus', 'GhostConv',
-           'ChannelAttention', 'SpatialAttention', 'CBAM', 'Concat', 'RepConv', 'SConv_spike')
+           'ChannelAttention', 'SpatialAttention', 'CBAM', 'Concat', 'RepConv', 'SConv_spike', 'SConv_AT')
 
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
@@ -115,6 +116,7 @@ class SConv(nn.Module):
         spk_rec.append(spk)
 
       self.node.reset()
+      #self.node.neuronal_reset(spk)
 
       spk_output = torch.stack(spk_rec).view(-1, shape[0], shape[1], shape[2], shape[3]).sum(0)
 
@@ -471,6 +473,68 @@ class SConv_spike(nn.Module):
       mem_rec.append(mem_bn)  # record membrane
 
     shape = spk_bn.size()
+
+    spk_output = torch.stack(spk_rec).view(-1, shape[0], shape[1], shape[2], shape[3]).sum(0)
+
+    return spk_output
+
+class SConv_AT(nn.Module):
+  """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
+
+  def __init__(self, c1, c2, k=1, s=1, calculation=False, p=None, g=1, d=1, act=True):
+    """Initialize Conv layer with given arguments including activation."""
+    super().__init__()
+    self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
+    self.bn = nn.BatchNorm2d(c2)
+
+    beta = 0.5
+    # Leaky 뉴런 추가
+    # self.lif_conv = snn.Leaky(beta=beta, learn_beta=True)
+    self.lif_bn = AdaptiveLIFNode()
+
+    variables = {}
+
+    with open('/Users/kdg/Hermes/yolo_v8/variables.csv', 'r') as csvfile:
+      reader = csv.reader(csvfile)
+      for row in reader:
+        variable, value = row
+        variables[variable.strip()] = value.strip()
+
+    self.timestep = int(variables['time-step'])
+
+    self.calculation = calculation
+
+  def forward(self, x):
+    if self.calculation == True:
+      print("#=====SConv_AT Block=====#")
+    # mem_conv = self.lif_conv.init_leaky()  # reset/init hidden states at t=0
+    spk_rec = []  # record output spikes
+
+    # generate spikes from input data (x)
+    spikes = spikegen.rate(x, num_steps=self.timestep)
+
+    # input spikes during self.timestep
+    for t in range(self.timestep):
+      cur_conv = self.conv(spikes[t])
+      # spk_conv, mem_conv = self.lif_conv(cur_conv, mem_conv)
+      cur_bn = self.bn(cur_conv)
+      spk_bn = self.lif_bn(cur_bn.flatten(1))
+
+      if self.calculation == True:
+        # conv 계층 연산 횟수 측정
+        conv_syops = conv_syops_counter_hook(self.conv, spikes[t], cur_conv, "sconv_conv")
+        # lif_conv(Leaky) 계층 연산 횟수 측정
+        # lif_conv_syops = Leaky_syops_counter_hook(self.lif_conv, cur_conv, "sconv_lif_conv")
+        # bn 계층 연산 횟수 측정
+        bn_syops = bn_syops_counter_hook(self.bn, cur_conv, cur_bn, "sconv_bn")
+        # lif_bn(Leaky) 계층 연산 횟수 측정
+        lif_bn_syops = Leaky_syops_counter_hook(self.lif_bn, cur_bn, "sconv_lif_bn")
+
+      spk_rec.append(spk_bn)  # record spikes
+
+    self.lif_bn.reset()
+
+    shape = cur_bn.size()
 
     spk_output = torch.stack(spk_rec).view(-1, shape[0], shape[1], shape[2], shape[3]).sum(0)
 
