@@ -582,7 +582,7 @@ class SBottleneck_AT(nn.Module):
 
     # Conversion of last conv layer
     if 1 in spk_conv_li:
-      print("SBottleneck_spike-2 : SConv_spike")
+      print("SBottleneck_spike-2 : SConv_AT")
       self.cv2 = SConv_AT(c_, c2, k[1], 1, calculation, g=g)
     else:
       print("SBottleneck_spike-2 : Conv")
