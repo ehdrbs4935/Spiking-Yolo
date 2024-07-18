@@ -75,7 +75,7 @@ class SConv(nn.Module):
 
         variables = {}
 
-        with open('/Users/kdg/Hermes/yolo_v8/variables.csv', 'r') as csvfile:
+        with open('variables.csv', 'r') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
                 variable, value = row
@@ -424,14 +424,9 @@ class SConv_spike(nn.Module):
     self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
     self.bn = nn.BatchNorm2d(c2)
 
-    beta = 0.5
-    # Leaky 뉴런 추가
-    # self.lif_conv = snn.Leaky(beta=beta, learn_beta=True)
-    self.lif_bn = snn.Leaky(beta=beta, learn_beta=True)
-
     variables = {}
 
-    with open('/Users/kdg/Hermes/yolo_v8/variables.csv', 'r') as csvfile:
+    with open('variables.csv', 'r') as csvfile:
       reader = csv.reader(csvfile)
       for row in reader:
         variable, value = row
@@ -439,15 +434,22 @@ class SConv_spike(nn.Module):
 
     self.timestep = int(variables['time-step'])
 
+    # Spiking 뉴런 추가
+    neuron_name = variables['neuron']
+    if neuron_name == 'IF':
+        self.lif_bn = neuron.IFNode()
+    elif neuron_name == 'LIF':
+        self.node = neuron.LIFNode()
+    else:
+        raise ValueError("Non defined neuron")
+
     self.calculation = calculation
 
   def forward(self, x):
     if self.calculation == True:
       print("#=====SConv_spike Block=====#")
-    # mem_conv = self.lif_conv.init_leaky()  # reset/init hidden states at t=0
-    mem_bn = self.lif_bn.init_leaky()
+
     spk_rec = []  # record output spikes
-    mem_rec = []  # record output hidden states
 
     # generate spikes from input data (x)
     spikes = spikegen.rate(x, num_steps=self.timestep)
@@ -457,7 +459,8 @@ class SConv_spike(nn.Module):
       cur_conv = self.conv(spikes[t])
       # spk_conv, mem_conv = self.lif_conv(cur_conv, mem_conv)
       cur_bn = self.bn(cur_conv)
-      spk_bn, mem_bn = self.lif_bn(cur_bn, mem_bn)
+      # spk_bn, mem_bn = self.lif_bn(cur_bn, mem_bn)
+      spk_bn = self.lif_bn(cur_bn)
 
       if self.calculation == True:
         # conv 계층 연산 횟수 측정
@@ -470,9 +473,9 @@ class SConv_spike(nn.Module):
         lif_bn_syops = Leaky_syops_counter_hook(self.lif_bn, cur_bn, "sconv_lif_bn")
 
       spk_rec.append(spk_bn)  # record spikes
-      mem_rec.append(mem_bn)  # record membrane
 
-    shape = spk_bn.size()
+    shape = cur_bn.size()
+    self.lif_bn.reset()
 
     spk_output = torch.stack(spk_rec).view(-1, shape[0], shape[1], shape[2], shape[3]).sum(0)
 
@@ -487,20 +490,24 @@ class SConv_AT(nn.Module):
     self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
     self.bn = nn.BatchNorm2d(c2)
 
-    beta = 0.5
-    # Leaky 뉴런 추가
-    # self.lif_conv = snn.Leaky(beta=beta, learn_beta=True)
-    self.lif_bn = AdaptiveLIFNode()
-
     variables = {}
 
-    with open('/Users/kdg/Hermes/yolo_v8/variables.csv', 'r') as csvfile:
+    with open('variables.csv', 'r') as csvfile:
       reader = csv.reader(csvfile)
       for row in reader:
         variable, value = row
         variables[variable.strip()] = value.strip()
 
     self.timestep = int(variables['time-step'])
+
+    # Spiking 뉴런 추가
+    neuron_name = variables['neuron']
+    if neuron_name == 'IF':
+        self.lif_bn = neuron.IFNode()
+    elif neuron_name == 'LIF':
+        self.node = neuron.LIFNode()
+    else:
+        raise ValueError("Non defined neuron")
 
     self.calculation = calculation
 
