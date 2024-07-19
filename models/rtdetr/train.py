@@ -23,11 +23,11 @@ class RTDETRTrainer(DetectionTrainer):
 
     Example:
         ```python
-        from ultralytics.models.rtdetr.train import RTDETRTrainer
+        from ultralytics.models.rtdetr.backbone_C2f_Bottleneck import RTDETRTrainer
 
         args = dict(model='rtdetr-l.yaml', data='coco8.yaml', imgsz=640, epochs=3)
         trainer = RTDETRTrainer(overrides=args)
-        trainer.train()
+        trainer.backbone_C2f_Bottleneck()
         ```
     """
 
@@ -54,7 +54,7 @@ class RTDETRTrainer(DetectionTrainer):
 
         Args:
             img_path (str): Path to the folder containing images.
-            mode (str): Dataset mode, either 'train' or 'val'.
+            mode (str): Dataset mode, either 'backbone_C2f_Bottleneck' or 'val'.
             batch (int, optional): Batch size for rectangle training. Defaults to None.
 
         Returns:
@@ -63,7 +63,7 @@ class RTDETRTrainer(DetectionTrainer):
         return RTDETRDataset(img_path=img_path,
                              imgsz=self.args.imgsz,
                              batch_size=batch,
-                             augment=mode == 'train',
+                             augment=mode == 'backbone_C2f_Bottleneck',
                              hyp=self.args,
                              rect=False,
                              cache=self.args.cache or None,

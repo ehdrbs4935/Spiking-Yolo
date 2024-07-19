@@ -312,7 +312,7 @@ def on_train_epoch_end(trainer):
     curr_step = metadata['curr_step']
 
     experiment.log_metrics(
-        trainer.label_loss_items(trainer.tloss, prefix='train'),
+        trainer.label_loss_items(trainer.tloss, prefix='backbone_C2f_Bottleneck'),
         step=curr_step,
         epoch=curr_epoch,
     )

@@ -25,7 +25,7 @@ class ClassificationTrainer(BaseTrainer):
 
         args = dict(model='yolov8n-cls.pt', data='imagenet10', epochs=3)
         trainer = ClassificationTrainer(overrides=args)
-        trainer.train()
+        trainer.backbone_C2f_Bottleneck()
         ```
     """
 
@@ -78,18 +78,18 @@ class ClassificationTrainer(BaseTrainer):
 
         return ckpt
 
-    def build_dataset(self, img_path, mode='train', batch=None):
-        """Creates a ClassificationDataset instance given an image path, and mode (train/test etc.)."""
-        return ClassificationDataset(root=img_path, args=self.args, augment=mode == 'train', prefix=mode)
+    def build_dataset(self, img_path, mode='backbone_C2f_Bottleneck', batch=None):
+        """Creates a ClassificationDataset instance given an image path, and mode (backbone_C2f_Bottleneck/test etc.)."""
+        return ClassificationDataset(root=img_path, args=self.args, augment=mode == 'backbone_C2f_Bottleneck', prefix=mode)
 
-    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode='train'):
+    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode='backbone_C2f_Bottleneck'):
         """Returns PyTorch DataLoader with transforms to preprocess images for inference."""
         with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
             dataset = self.build_dataset(dataset_path, mode)
 
         loader = build_dataloader(dataset, batch_size, self.args.workers, rank=rank)
         # Attach inference transforms
-        if mode != 'train':
+        if mode != 'backbone_C2f_Bottleneck':
             if is_parallel(self.model):
                 self.model.module.transforms = loader.dataset.torch_transforms
             else:
@@ -112,7 +112,7 @@ class ClassificationTrainer(BaseTrainer):
         self.loss_names = ['loss']
         return yolo.classify.ClassificationValidator(self.test_loader, self.save_dir)
 
-    def label_loss_items(self, loss_items=None, prefix='train'):
+    def label_loss_items(self, loss_items=None, prefix='backbone_C2f_Bottleneck'):
         """
         Returns a loss dict with labelled training loss items tensor.
 

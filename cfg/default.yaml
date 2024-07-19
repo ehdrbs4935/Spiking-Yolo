@@ -2,17 +2,17 @@
 # Default training settings and hyperparameters for medium-augmentation COCO training
 
 task: detect  # (str) YOLO task, i.e. detect, segment, classify, pose
-mode: train  # (str) YOLO mode, i.e. train, val, predict, export, track, benchmark
+mode: backbone_C2f_Bottleneck  # (str) YOLO mode, i.e. backbone_C2f_Bottleneck, val, predict, export, track, benchmark
 
 # Train settings -------------------------------------------------------------------------------------------------------
 model:  # (str, optional) path to model file, i.e. yolov8n.pt, yolov8n.yaml
 data:  # (str, optional) path to data file, i.e. coco128.yaml
-epochs: 100  # (int) number of epochs to train for
-time:  # (float, optional) number of hours to train for, overrides epochs if supplied
+epochs: 100  # (int) number of epochs to backbone_C2f_Bottleneck for
+time:  # (float, optional) number of hours to backbone_C2f_Bottleneck for, overrides epochs if supplied
 patience: 50  # (int) epochs to wait for no observable improvement for early stopping of training
 batch: 16  # (int) number of images per batch (-1 for AutoBatch)
-imgsz: 640  # (int | list) input images size as int for train and val modes, or list[w,h] for predict and export modes
-save: True  # (bool) save train checkpoints and predict results
+imgsz: 640  # (int | list) input images size as int for backbone_C2f_Bottleneck and val modes, or list[w,h] for predict and export modes
+save: True  # (bool) save backbone_C2f_Bottleneck checkpoints and predict results
 save_period: -1 # (int) Save checkpoint every x epochs (disabled if < 1)
 cache: False  # (bool) True/ram, disk or False. Use cache for data loading
 device:  # (int | str | list, optional) device to run on, i.e. cuda device=0 or device=0,1,2,3 or device=cpu
@@ -25,24 +25,24 @@ optimizer: auto  # (str) optimizer to use, choices=[SGD, Adam, Adamax, AdamW, NA
 verbose: True  # (bool) whether to print verbose output
 seed: 0  # (int) random seed for reproducibility
 deterministic: True  # (bool) whether to enable deterministic mode
-single_cls: False  # (bool) train multi-class data as single-class
-rect: False  # (bool) rectangular training if mode='train' or rectangular validation if mode='val'
+single_cls: False  # (bool) backbone_C2f_Bottleneck multi-class data as single-class
+rect: False  # (bool) rectangular training if mode='backbone_C2f_Bottleneck' or rectangular validation if mode='val'
 cos_lr: False  # (bool) use cosine learning rate scheduler
 close_mosaic: 10  # (int) disable mosaic augmentation for final epochs (0 to disable)
 resume: False  # (bool) resume training from last checkpoint
 amp: True  # (bool) Automatic Mixed Precision (AMP) training, choices=[True, False], True runs AMP check
-fraction: 1.0  # (float) dataset fraction to train on (default is 1.0, all images in train set)
+fraction: 1.0  # (float) dataset fraction to backbone_C2f_Bottleneck on (default is 1.0, all images in backbone_C2f_Bottleneck set)
 profile: False  # (bool) profile ONNX and TensorRT speeds during training for loggers
 freeze: None  # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
 # Segmentation
-overlap_mask: True  # (bool) masks should overlap during training (segment train only)
-mask_ratio: 4  # (int) mask downsample ratio (segment train only)
+overlap_mask: True  # (bool) masks should overlap during training (segment backbone_C2f_Bottleneck only)
+mask_ratio: 4  # (int) mask downsample ratio (segment backbone_C2f_Bottleneck only)
 # Classification
-dropout: 0.0  # (float) use dropout regularization (classify train only)
+dropout: 0.0  # (float) use dropout regularization (classify backbone_C2f_Bottleneck only)
 
 # Val/Test settings ----------------------------------------------------------------------------------------------------
 val: True  # (bool) validate/test during training
-split: val  # (str) dataset split to use for validation, i.e. 'val', 'test' or 'train'
+split: val  # (str) dataset split to use for validation, i.e. 'val', 'test' or 'backbone_C2f_Bottleneck'
 save_json: False  # (bool) save results to JSON file
 save_hybrid: False  # (bool) save hybrid version of labels (labels + additional predictions)
 conf:  # (float, optional) object confidence threshold for detection (default 0.25 predict, 0.001 val)
@@ -50,7 +50,7 @@ iou: 0.7  # (float) intersection over union (IoU) threshold for NMS
 max_det: 300  # (int) maximum number of detections per image
 half: False  # (bool) use half precision (FP16)
 dnn: False  # (bool) use OpenCV DNN for ONNX inference
-plots: True  # (bool) save plots and images during train/val
+plots: True  # (bool) save plots and images during backbone_C2f_Bottleneck/val
 
 # Predict settings -----------------------------------------------------------------------------------------------------
 source:  # (str, optional) source directory for images or videos

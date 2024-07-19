@@ -21,7 +21,7 @@ def run_ray_tune(model,
         grace_period (int, optional): The grace period in epochs of the ASHA scheduler. Defaults to 10.
         gpu_per_trial (int, optional): The number of GPUs to allocate per trial. Defaults to None.
         max_samples (int, optional): The maximum number of trials to run. Defaults to 10.
-        train_args (dict, optional): Additional arguments to pass to the `train()` method. Defaults to {}.
+        train_args (dict, optional): Additional arguments to pass to the `backbone_C2f_Bottleneck()` method. Defaults to {}.
 
     Returns:
         (dict): A dictionary containing the results of the hyperparameter search.

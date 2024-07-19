@@ -1,6 +1,6 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 # DOTA 2.0 dataset https://captain-whu.github.io/DOTA/index.html for object detection in aerial images by Wuhan University
-# Example usage: yolo train model=yolov8n-obb.pt data=DOTAv2.yaml
+# Example usage: yolo backbone_C2f_Bottleneck model=yolov8n-obb.pt data=DOTAv2.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -8,7 +8,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/DOTAv2  # dataset root dir
-train: images/train  # train images (relative to 'path') 1411 images
+train: images/backbone_C2f_Bottleneck  # backbone_C2f_Bottleneck images (relative to 'path') 1411 images
 val: images/val  # val images (relative to 'path') 458 images
 test: images/test  # test images (optional) 937 images
 

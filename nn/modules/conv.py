@@ -439,7 +439,7 @@ class SConv_spike(nn.Module):
     if neuron_name == 'IF':
         self.lif_bn = neuron.IFNode()
     elif neuron_name == 'LIF':
-        self.node = neuron.LIFNode()
+        self.lif_bn = neuron.LIFNode()
     else:
         raise ValueError("Non defined neuron")
 
@@ -503,9 +503,9 @@ class SConv_AT(nn.Module):
     # Spiking 뉴런 추가
     neuron_name = variables['neuron']
     if neuron_name == 'IF':
-        self.lif_bn = neuron.IFNode()
+        self.lif_bn = AdaptiveIFNode()
     elif neuron_name == 'LIF':
-        self.node = neuron.LIFNode()
+        self.lif_bn = AdaptiveLIFNode()
     else:
         raise ValueError("Non defined neuron")
 

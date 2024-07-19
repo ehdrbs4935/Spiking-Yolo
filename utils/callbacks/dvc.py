@@ -76,7 +76,7 @@ def on_pretrain_routine_start(trainer):
 
 def on_pretrain_routine_end(trainer):
     """Logs plots related to the training process at the end of the pretraining routine."""
-    _log_plots(trainer.plots, 'train')
+    _log_plots(trainer.plots, 'backbone_C2f_Bottleneck')
 
 
 def on_train_start(trainer):
@@ -95,7 +95,7 @@ def on_fit_epoch_end(trainer):
     """Logs training metrics and model info, and advances to next step on the end of each fit epoch."""
     global _training_epoch
     if live and _training_epoch:
-        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix='train'), **trainer.metrics, **trainer.lr}
+        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix='backbone_C2f_Bottleneck'), **trainer.metrics, **trainer.lr}
         for metric, value in all_metrics.items():
             live.log_metric(metric, value)
 
@@ -104,7 +104,7 @@ def on_fit_epoch_end(trainer):
             for metric, value in model_info_for_loggers(trainer).items():
                 live.log_metric(metric, value, plot=False)
 
-        _log_plots(trainer.plots, 'train')
+        _log_plots(trainer.plots, 'backbone_C2f_Bottleneck')
         _log_plots(trainer.validator.plots, 'val')
 
         live.next_step()
@@ -115,7 +115,7 @@ def on_train_end(trainer):
     """Logs the best metrics, plots, and confusion matrix at the end of training if DVCLive is active."""
     if live:
         # At the end log the best metrics. It runs validator on the best model internally.
-        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix='train'), **trainer.metrics, **trainer.lr}
+        all_metrics = {**trainer.label_loss_items(trainer.tloss, prefix='backbone_C2f_Bottleneck'), **trainer.metrics, **trainer.lr}
         for metric, value in all_metrics.items():
             live.log_metric(metric, value, plot=False)
 

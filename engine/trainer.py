@@ -3,7 +3,7 @@
 Train a model on a dataset.
 
 Usage:
-    $ yolo mode=train model=yolov8n.pt data=coco128.yaml imgsz=640 epochs=100 batch=16
+    $ yolo mode=backbone_C2f_Bottleneck model=yolov8n.pt data=coco128.yaml imgsz=640 epochs=100 batch=16
 """
 
 import math
@@ -50,7 +50,7 @@ class BaseTrainer:
         best (Path): Path to the best checkpoint.
         save_period (int): Save checkpoint every x epochs (disabled if < 1).
         batch_size (int): Batch size for training.
-        epochs (int): Number of epochs to train for.
+        epochs (int): Number of epochs to backbone_C2f_Bottleneck for.
         start_epoch (int): Starting epoch for training.
         device (torch.device): Device to use for training.
         amp (bool): Flag to enable AMP (Automatic Mixed Precision).
@@ -115,7 +115,7 @@ class BaseTrainer:
             elif self.args.data.split('.')[-1] in ('yaml', 'yml') or self.args.task in ('detect', 'segment', 'pose'):
                 self.data = check_det_dataset(self.args.data)
                 if 'yaml_file' in self.data:
-                    self.args.data = self.data['yaml_file']  # for validating 'yolo train data=url.zip' usage
+                    self.args.data = self.data['yaml_file']  # for validating 'yolo backbone_C2f_Bottleneck data=url.zip' usage
         except Exception as e:
             raise RuntimeError(emojis(f"Dataset '{clean_url(self.args.data)}' error ❌ {e}")) from e
 
@@ -165,7 +165,7 @@ class BaseTrainer:
         else:  # i.e. device='cpu' or 'mps'
             world_size = 0
 
-        # Run subprocess if DDP training, else train normally
+        # Run subprocess if DDP training, else backbone_C2f_Bottleneck normally
         if world_size > 1 and 'LOCAL_RANK' not in os.environ:
             # Argument checks
             if self.args.rect:
@@ -256,7 +256,7 @@ class BaseTrainer:
 
         # Dataloaders
         batch_size = self.batch_size // max(world_size, 1)
-        self.train_loader = self.get_dataloader(self.trainset, batch_size=batch_size, rank=RANK, mode='train')
+        self.train_loader = self.get_dataloader(self.trainset, batch_size=batch_size, rank=RANK, mode='backbone_C2f_Bottleneck')
         if RANK in (-1, 0):
             self.test_loader = self.get_dataloader(self.testset, batch_size=batch_size * 2, rank=-1, mode='val')
             self.validator = self.get_validator()
@@ -297,7 +297,7 @@ class BaseTrainer:
         self.epoch_time_start = time.time()
         self.train_time_start = time.time()
         self.run_callbacks('on_train_start')
-        LOGGER.info(f'Image sizes {self.args.imgsz} train, {self.args.imgsz} val\n'
+        LOGGER.info(f'Image sizes {self.args.imgsz} backbone_C2f_Bottleneck, {self.args.imgsz} val\n'
                     f'Using {self.train_loader.num_workers * (world_size or 1)} dataloader workers\n'
                     f"Logging results to {colorstr('bold', self.save_dir)}\n"
                     f'Starting training for '
@@ -460,11 +460,11 @@ class BaseTrainer:
     @staticmethod
     def get_dataset(data):
         """
-        Get train, val path from data dict if it exists.
+        Get backbone_C2f_Bottleneck, val path from data dict if it exists.
 
         Returns None if data format is not recognized.
         """
-        return data['train'], data.get('val') or data.get('test')
+        return data['backbone_C2f_Bottleneck'], data.get('val') or data.get('test')
 
     def setup_model(self):
         """Load/create/download model for any task."""
@@ -515,15 +515,15 @@ class BaseTrainer:
         """Returns a NotImplementedError when the get_validator function is called."""
         raise NotImplementedError('get_validator function not implemented in trainer')
 
-    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode='train'):
+    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode='backbone_C2f_Bottleneck'):
         """Returns dataloader derived from torch.data.Dataloader."""
         raise NotImplementedError('get_dataloader function not implemented in trainer')
 
-    def build_dataset(self, img_path, mode='train', batch=None):
+    def build_dataset(self, img_path, mode='backbone_C2f_Bottleneck', batch=None):
         """Build dataset."""
         raise NotImplementedError('build_dataset function not implemented in trainer')
 
-    def label_loss_items(self, loss_items=None, prefix='train'):
+    def label_loss_items(self, loss_items=None, prefix='backbone_C2f_Bottleneck'):
         """Returns a loss dict with labelled training loss items tensor."""
         # Not needed for classification but necessary for segmentation & detection
         return {'loss': loss_items} if loss_items is not None else ['loss']
@@ -600,7 +600,7 @@ class BaseTrainer:
 
             except Exception as e:
                 raise FileNotFoundError('Resume checkpoint not found. Please pass a valid checkpoint to resume from, '
-                                        "i.e. 'yolo train resume model=path/to/last.pt'") from e
+                                        "i.e. 'yolo backbone_C2f_Bottleneck resume model=path/to/last.pt'") from e
         self.resume = resume
 
     def resume_training(self, ckpt):
@@ -618,7 +618,7 @@ class BaseTrainer:
         if self.resume:
             assert start_epoch > 0, \
                 f'{self.args.model} training to {self.epochs} epochs is finished, nothing to resume.\n' \
-                f"Start a new training without resuming, i.e. 'yolo train model={self.args.model}'"
+                f"Start a new training without resuming, i.e. 'yolo backbone_C2f_Bottleneck model={self.args.model}'"
             LOGGER.info(
                 f'Resuming training from {self.args.model} from epoch {start_epoch + 1} to {self.epochs} total epochs')
         if self.epochs < start_epoch:

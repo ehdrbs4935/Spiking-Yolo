@@ -90,8 +90,8 @@ def on_train_epoch_end(trainer):
         if trainer.epoch == 1:
             _log_debug_samples(sorted(trainer.save_dir.glob('train_batch*.jpg')), 'Mosaic')
         # Report the current training progress
-        for k, v in trainer.label_loss_items(trainer.tloss, prefix='train').items():
-            task.get_logger().report_scalar('train', k, v, iteration=trainer.epoch)
+        for k, v in trainer.label_loss_items(trainer.tloss, prefix='backbone_C2f_Bottleneck').items():
+            task.get_logger().report_scalar('backbone_C2f_Bottleneck', k, v, iteration=trainer.epoch)
         for k, v in trainer.lr.items():
             task.get_logger().report_scalar('lr', k, v, iteration=trainer.epoch)
 

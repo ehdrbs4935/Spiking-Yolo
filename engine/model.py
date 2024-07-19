@@ -162,7 +162,7 @@ class Model(nn.Module):
         if not (pt_module or pt_str):
             raise TypeError(
                 f"model='{self.model}' should be a *.pt PyTorch model to run this method, but is a different format. "
-                f"PyTorch models can train, val, predict and export, i.e. 'model.train(data=...)', but exported "
+                f"PyTorch models can backbone_C2f_Bottleneck, val, predict and export, i.e. 'model.backbone_C2f_Bottleneck(data=...)', but exported "
                 f"formats like ONNX, TensorRT etc. only support 'predict' and 'val' modes, "
                 f"i.e. 'yolo predict model=yolov8n.onnx'.\nTo run CUDA or MPS inference please pass the device "
                 f"argument directly in your inference command, i.e. 'model.predict(source=..., device=0)'")
@@ -344,7 +344,7 @@ class Model(nn.Module):
 
         overrides = yaml_load(checks.check_yaml(kwargs['cfg'])) if kwargs.get('cfg') else self.overrides
         custom = {'data': DEFAULT_CFG_DICT['data'] or TASK2DATA[self.task]}  # method defaults
-        args = {**overrides, **custom, **kwargs, 'mode': 'train'}  # highest priority args on the right
+        args = {**overrides, **custom, **kwargs, 'mode': 'backbone_C2f_Bottleneck'}  # highest priority args on the right
         if args.get('resume'):
             args['resume'] = self.ckpt_path
 
@@ -377,7 +377,7 @@ class Model(nn.Module):
             from .tuner import Tuner
 
             custom = {}  # method defaults
-            args = {**self.overrides, **custom, **kwargs, 'mode': 'train'}  # highest priority args on the right
+            args = {**self.overrides, **custom, **kwargs, 'mode': 'backbone_C2f_Bottleneck'}  # highest priority args on the right
             return Tuner(args=args, _callbacks=self.callbacks)(model=self, iterations=iterations)
 
     def _apply(self, fn):
