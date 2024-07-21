@@ -1,6 +1,6 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 # SKU-110K retail items dataset https://github.com/eg4000/SKU110K_CVPR19 by Trax Retail
-# Example usage: yolo backbone_C2f_Bottleneck data=SKU-110K.yaml
+# Example usage: yolo train1 data=SKU-110K.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -9,7 +9,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/SKU-110K  # dataset root dir
-train: backbone_C2f_Bottleneck.txt  # backbone_C2f_Bottleneck images (relative to 'path')  8219 images
+train: train1.txt  # train1 images (relative to 'path')  8219 images
 val: val.txt  # val images (relative to 'path')  588 images
 test: test.txt  # test images (optional)  2936 images
 

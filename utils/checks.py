@@ -126,7 +126,7 @@ def check_imgsz(imgsz, stride=32, min_dim=1, max_dim=2, floor=0):
 
     # Apply max_dim
     if len(imgsz) > max_dim:
-        msg = "'backbone_C2f_Bottleneck' and 'val' imgsz must be an integer, while 'predict' and 'export' imgsz may be a [h, w] list " \
+        msg = "'train' and 'val' imgsz must be an integer, while 'predict' and 'export' imgsz may be a [h, w] list " \
               "or an integer, i.e. 'yolo export imgsz=640,480' or 'yolo export imgsz=640'"
         if max_dim != 1:
             raise ValueError(f'imgsz={imgsz} is not a valid image size. {msg}')

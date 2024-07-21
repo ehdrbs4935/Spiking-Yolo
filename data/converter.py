@@ -151,7 +151,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
     """
     Converts DOTA dataset annotations to YOLO OBB (Oriented Bounding Box) format.
 
-    The function processes images in the 'backbone_C2f_Bottleneck' and 'val' folders of the DOTA dataset. For each image, it reads the
+    The function processes images in the 'train1' and 'val' folders of the DOTA dataset. For each image, it reads the
     associated label from the original labels directory and writes new labels in YOLO OBB format to a new directory.
 
     Args:
@@ -168,7 +168,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
         The directory structure assumed for the DOTA dataset:
             - DOTA
                 ├─ images
-                │   ├─ backbone_C2f_Bottleneck
+                │   ├─ train1
                 │   └─ val
                 └─ labels
                     ├─ train_original
@@ -177,7 +177,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
         After execution, the function will organize the labels into:
             - DOTA
                 └─ labels
-                    ├─ backbone_C2f_Bottleneck
+                    ├─ train1
                     └─ val
     """
     dota_root_path = Path(dota_root_path)
@@ -222,7 +222,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
                 formatted_coords = ['{:.6g}'.format(coord) for coord in normalized_coords]
                 g.write(f"{class_idx} {' '.join(formatted_coords)}\n")
 
-    for phase in ['backbone_C2f_Bottleneck', 'val']:
+    for phase in ['train1', 'val']:
         image_dir = dota_root_path / 'images' / phase
         orig_label_dir = dota_root_path / 'labels' / f'{phase}_original'
         save_dir = dota_root_path / 'labels' / phase

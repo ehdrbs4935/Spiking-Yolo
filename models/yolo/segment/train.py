@@ -18,7 +18,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
 
         args = dict(model='yolov8n-seg.pt', data='coco8-seg.yaml', epochs=3)
         trainer = SegmentationTrainer(overrides=args)
-        trainer.backbone_C2f_Bottleneck()
+        trainer.train1()
         ```
     """
 

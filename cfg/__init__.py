@@ -12,7 +12,7 @@ from ultralytics.utils import (ASSETS, DEFAULT_CFG, DEFAULT_CFG_DICT, DEFAULT_CF
                                colorstr, deprecation_warn, yaml_load, yaml_print)
 
 # Define valid tasks and modes
-MODES = 'backbone_C2f_Bottleneck', 'val', 'predict', 'export', 'track', 'benchmark'
+MODES = 'train', 'val', 'predict', 'export', 'track', 'benchmark'
 TASKS = 'detect', 'segment', 'classify', 'pose'
 TASK2DATA = {'detect': 'coco8.yaml', 'segment': 'coco8-seg.yaml', 'classify': 'imagenet10', 'pose': 'coco8-pose.yaml'}
 TASK2MODEL = {
@@ -38,7 +38,7 @@ CLI_HELP_MSG = \
                     See all ARGS at https://docs.ultralytics.com/usage/cfg or with 'yolo cfg'
 
     1. Train a detection model for 10 epochs with an initial learning_rate of 0.01
-        yolo backbone_C2f_Bottleneck data=coco128.yaml model=yolov8n.pt epochs=10 lr0=0.01
+        yolo train data=coco128.yaml model=yolov8n.pt epochs=10 lr0=0.01
 
     2. Predict a YouTube video using a pretrained segmentation model at image size 320:
         yolo predict model=yolov8n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320
@@ -146,7 +146,7 @@ def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, ove
 
 
 def get_save_dir(args, name=None):
-    """Return save_dir as created from backbone_C2f_Bottleneck/val/predict arguments."""
+    """Return save_dir as created from train/val/predict arguments."""
 
     if getattr(args, 'save_dir', None):
         save_dir = args.save_dir
@@ -321,7 +321,7 @@ def entrypoint(debug=''):
     This function allows for:
     - passing mandatory YOLO args as a list of strings
     - specifying the task to be performed, either 'detect', 'segment' or 'classify'
-    - specifying the mode, either 'backbone_C2f_Bottleneck', 'val', 'test', or 'predict'
+    - specifying the mode, either 'train', 'val', 'test', or 'predict'
     - running special modes like 'checks'
     - passing overrides to the package's configuration
 
@@ -435,7 +435,7 @@ def entrypoint(debug=''):
     if mode in ('predict', 'track') and 'source' not in overrides:
         overrides['source'] = DEFAULT_CFG.source or ASSETS
         LOGGER.warning(f"WARNING ⚠️ 'source' is missing. Using default 'source={overrides['source']}'.")
-    elif mode in ('backbone_C2f_Bottleneck', 'val'):
+    elif mode in ('train', 'val'):
         if 'data' not in overrides and 'resume' not in overrides:
             overrides['data'] = DEFAULT_CFG.data or TASK2DATA.get(task or DEFAULT_CFG.task, DEFAULT_CFG.data)
             LOGGER.warning(f"WARNING ⚠️ 'data' is missing. Using default 'data={overrides['data']}'.")

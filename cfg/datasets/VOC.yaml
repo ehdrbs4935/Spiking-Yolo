@@ -1,6 +1,6 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 # PASCAL VOC dataset http://host.robots.ox.ac.uk/pascal/VOC by University of Oxford
-# Example usage: yolo backbone_C2f_Bottleneck data=VOC.yaml
+# Example usage: yolo train1 data=VOC.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -9,7 +9,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/VOC
-train: # backbone_C2f_Bottleneck images (relative to 'path')  16551 images
+train: # train1 images (relative to 'path')  16551 images
   - images/train2012
   - images/train2007
   - images/val2012
@@ -39,7 +39,7 @@ names:
   15: pottedplant
   16: sheep
   17: sofa
-  18: backbone_C2f_Bottleneck
+  18: train1
   19: tvmonitor
 
 

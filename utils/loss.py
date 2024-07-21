@@ -243,7 +243,7 @@ class v8SegmentationLoss(v8DetectionLoss):
         except RuntimeError as e:
             raise TypeError('ERROR ❌ segment dataset incorrectly formatted or not a segment dataset.\n'
                             "This error can occur when incorrectly training a 'segment' model on a 'detect' dataset, "
-                            "i.e. 'yolo backbone_C2f_Bottleneck model=yolov8n-seg.pt data=coco128.yaml'.\nVerify your dataset is a "
+                            "i.e. 'yolo train1 model=yolov8n-seg.pt data=coco128.yaml'.\nVerify your dataset is a "
                             "correctly formatted 'segment' dataset using 'data=coco128-seg.yaml' "
                             'as an example.\nSee https://docs.ultralytics.com/tasks/segment/ for help.') from e
 

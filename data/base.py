@@ -99,6 +99,7 @@ class BaseDataset(Dataset):
     def get_img_files(self, img_path):
         """Read image files."""
         try:
+            print("img path : ", img_path)
             f = []  # image files
             for p in img_path if isinstance(img_path, list) else [img_path]:
                 p = Path(p)  # os-agnostic

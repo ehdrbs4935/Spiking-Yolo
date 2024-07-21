@@ -23,32 +23,32 @@ class DetectionTrainer(BaseTrainer):
 
         args = dict(model='yolov8n.pt', data='coco8.yaml', epochs=3)
         trainer = DetectionTrainer(overrides=args)
-        trainer.backbone_C2f_Bottleneck()
+        trainer.train()
         ```
     """
 
-    def build_dataset(self, img_path, mode='backbone_C2f_Bottleneck', batch=None):
+    def build_dataset(self, img_path, mode='train', batch=None):
         """
         Build YOLO Dataset.
 
         Args:
             img_path (str): Path to the folder containing images.
-            mode (str): `backbone_C2f_Bottleneck` mode or `val` mode, users are able to customize different augmentations for each mode.
+            mode (str): `train` mode or `val` mode, users are able to customize different augmentations for each mode.
             batch (int, optional): Size of batches, this is for `rect`. Defaults to None.
         """
         gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
         return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == 'val', stride=gs)
 
-    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode='backbone_C2f_Bottleneck'):
+    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode='train'):
         """Construct and return dataloader."""
-        assert mode in ['backbone_C2f_Bottleneck', 'val']
+        assert mode in ['train', 'val']
         with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
             dataset = self.build_dataset(dataset_path, mode, batch_size)
-        shuffle = mode == 'backbone_C2f_Bottleneck'
+        shuffle = mode == 'train'
         if getattr(dataset, 'rect', False) and shuffle:
             LOGGER.warning("WARNING ⚠️ 'rect=True' is incompatible with DataLoader shuffle, setting shuffle=False")
             shuffle = False
-        workers = self.args.workers if mode == 'backbone_C2f_Bottleneck' else self.args.workers * 2
+        workers = self.args.workers if mode == 'train' else self.args.workers * 2
         return build_dataloader(dataset, batch_size, workers, shuffle, rank)  # return dataloader
 
     def preprocess_batch(self, batch):
@@ -78,7 +78,7 @@ class DetectionTrainer(BaseTrainer):
         self.loss_names = 'box_loss', 'cls_loss', 'dfl_loss'
         return yolo.detect.DetectionValidator(self.test_loader, save_dir=self.save_dir, args=copy(self.args))
 
-    def label_loss_items(self, loss_items=None, prefix='backbone_C2f_Bottleneck'):
+    def label_loss_items(self, loss_items=None, prefix='train'):
         """
         Returns a loss dict with labelled training loss items tensor.
 

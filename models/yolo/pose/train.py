@@ -18,7 +18,7 @@ class PoseTrainer(yolo.detect.DetectionTrainer):
 
         args = dict(model='yolov8n-pose.pt', data='coco8-pose.yaml', epochs=3)
         trainer = PoseTrainer(overrides=args)
-        trainer.backbone_C2f_Bottleneck()
+        trainer.train1()
         ```
     """
 
