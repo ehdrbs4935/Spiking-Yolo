@@ -3,7 +3,7 @@
 Train a model on a dataset.
 
 Usage:
-    $ yolo mode=train1 model=yolov8n.pt data=coco128.yaml imgsz=640 epochs=100 batch=16
+    $ yolo mode=train model=yolov8n.pt data=coco128.yaml imgsz=640 epochs=100 batch=16
 """
 
 import math
@@ -50,7 +50,7 @@ class BaseTrainer:
         best (Path): Path to the best checkpoint.
         save_period (int): Save checkpoint every x epochs (disabled if < 1).
         batch_size (int): Batch size for training.
-        epochs (int): Number of epochs to train1 for.
+        epochs (int): Number of epochs to train for.
         start_epoch (int): Starting epoch for training.
         device (torch.device): Device to use for training.
         amp (bool): Flag to enable AMP (Automatic Mixed Precision).
@@ -115,7 +115,7 @@ class BaseTrainer:
             elif self.args.data.split('.')[-1] in ('yaml', 'yml') or self.args.task in ('detect', 'segment', 'pose'):
                 self.data = check_det_dataset(self.args.data)
                 if 'yaml_file' in self.data:
-                    self.args.data = self.data['yaml_file']  # for validating 'yolo train1 data=url.zip' usage
+                    self.args.data = self.data['yaml_file']  # for validating 'yolo train data=url.zip' usage
         except Exception as e:
             raise RuntimeError(emojis(f"Dataset '{clean_url(self.args.data)}' error ❌ {e}")) from e
 
@@ -165,7 +165,7 @@ class BaseTrainer:
         else:  # i.e. device='cpu' or 'mps'
             world_size = 0
 
-        # Run subprocess if DDP training, else train1 normally
+        # Run subprocess if DDP training, else train normally
         if world_size > 1 and 'LOCAL_RANK' not in os.environ:
             # Argument checks
             if self.args.rect:
@@ -460,7 +460,7 @@ class BaseTrainer:
     @staticmethod
     def get_dataset(data):
         """
-        Get train1, val path from data dict if it exists.
+        Get train, val path from data dict if it exists.
 
         Returns None if data format is not recognized.
         """

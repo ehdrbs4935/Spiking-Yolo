@@ -21,7 +21,7 @@ def on_fit_epoch_end(trainer):
     session = getattr(trainer, 'hub_session', None)
     if session:
         # Upload metrics after val end
-        all_plots = {**trainer.label_loss_items(trainer.tloss, prefix='train1'), **trainer.metrics}
+        all_plots = {**trainer.label_loss_items(trainer.tloss, prefix='train'), **trainer.metrics}
         if trainer.epoch == 0:
             from ultralytics.utils.torch_utils import model_info_for_loggers
             all_plots = {**all_plots, **model_info_for_loggers(trainer)}
@@ -57,7 +57,7 @@ def on_train_end(trainer):
 
 
 def on_train_start(trainer):
-    """Run events on train1 start."""
+    """Run events on train start."""
     events(trainer.args)
 
 

@@ -1,6 +1,6 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 # COCO8 dataset (first 8 images from COCO train2017) by Ultralytics
-# Example usage: yolo train1 data=coco8.yaml
+# Example usage: yolo train data=coco8.yaml
 # parent
 # ├── ultralytics
 # └── datasets
@@ -9,7 +9,7 @@
 
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path: ../datasets/coco8  # dataset root dir
-train: images/train1  # train1 images (relative to 'path') 4 images
+train: images/train  # train images (relative to 'path') 4 images
 val: images/val  # val images (relative to 'path') 4 images
 test:  # test images (optional)
 
@@ -21,7 +21,7 @@ names:
   3: motorcycle
   4: airplane
   5: bus
-  6: train1
+  6: train
   7: truck
   8: boat
   9: traffic light
