@@ -236,7 +236,11 @@ class DetectionModel(BaseModel):
             LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml['nc'] = nc  # override YAML value
         self.model, self.save = parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
+        #print("Detection model")
+        #print(self.model)
         self.names = {i: f'{i}' for i in range(self.yaml['nc'])}  # default names dict
+        #print("Detection model names")
+        #print(self.names)
         self.inplace = self.yaml.get('inplace', True)
 
         # Build strides
@@ -729,7 +733,6 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args.insert(1, [ch[x] for x in f])
         else:
             c2 = ch[f]
-
         m_ = nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
         t = str(m)[8:-2].replace('__main__.', '')  # module type
         m.np = sum(x.numel() for x in m_.parameters())  # number params
@@ -741,7 +744,21 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         if i == 0:
             ch = []
         ch.append(c2)
-    return nn.Sequential(*layers), sorted(save)
+
+    print("⭐⭐⭐⭐⭐️Names of Layers⭐⭐⭐⭐⭐")
+    names = []
+    for i in range(len(layers)):
+      get_leaf_modules(layers[i], i, names)
+
+    return nn.Sequential(*layers), sorted(save), names
+
+# ⭐하위 모듈의 이름을 list에 저장하는 함수
+def get_leaf_modules(module, key_name, names):
+  # module이 가장 하위 모듈인 경우
+  if len(list(module.children())) == 0:
+     names.append(key_name)
+  for name, module in module.named_children():
+    get_leaf_modules(module, str(key_name) + '.' + str(name), names)
 
 
 def yaml_model_load(path):
