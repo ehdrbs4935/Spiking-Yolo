@@ -152,27 +152,26 @@ class SPPF(nn.Module):
         self.calculation = calculation
 
     def forward(self, x):
-      if self.calculation == True:
-        print("#=====SPPF Block=====#")
       """Forward pass through Ghost Convolution block."""
       x = self.cv1(x)
       # self.cv1(x) 호출 결과, "Conv(c1, c_, 1, 1)" 블록의 forward 함수가 호출되면서 해당 Conv 블록의 conv 및 bn 연산 횟수가 출력된다.
       y1 = self.m(x)
-      # MaxPool2d 연산 횟수 측정
-      if self.calculation == True:
-        maxpool_syops1 = pool_syops_counter_hook(self.m, x, y1, "sppf_pool1")
-
       y2 = self.m(y1)
-      # MaxPool2d 연산 횟수 측정
-      if self.calculation == True:
-        maxpool_syops2 = pool_syops_counter_hook(self.m, y1, y2, "sppf_pool2")
-
       y3 = self.m(y2)
-      # MaxPool2d 연산 횟수 측정
-      if self.calculation == True:
-        maxpool_syops3 = pool_syops_counter_hook(self.m, y2, y3, "sppf_pool3")
+      output = self.cv2(torch.cat((x, y1, y2, y3), 1))
 
-      return self.cv2(torch.cat((x, y1, y2, y3), 1))
+      self.calculation_li = []
+      self.calculation_li = self.cv1.calculation_li + self.cv2.calculation_li
+      if self.calculation == True:
+        # MaxPool2d 연산 횟수 측정
+        maxpool_syops1 = pool_syops_counter_hook(self.m, x, y1, "sppf_pool1")
+        maxpool_syops2 = pool_syops_counter_hook(self.m, y1, y2, "sppf_pool2")
+        maxpool_syops3 = pool_syops_counter_hook(self.m, y2, y3, "sppf_pool3")
+        self.calculation_li.append(maxpool_syops1 + maxpool_syops2 + maxpool_syops3)
+      else:
+        self.calculation_li.append(0)
+
+      return output
       # self.cv2(torch.cat((x, y1, y2, y3), 1))) 호출 결과, "Conv(c_ * 4, c2, 1, 1)" 블록의 forward 함수가 호출되면서 해당 Conv 블록의 conv 및 bn 연산 횟수가 출력된다.
 
 class SSPPF(nn.Module):
@@ -247,12 +246,17 @@ class C2f(nn.Module):
         self.calculation = calculation
 
     def forward(self, x):
-        if self.calculation == True:
-          print("#=====C2f Block=====#")
         """Forward pass through C2f layer."""
         y = list(self.cv1(x).chunk(2, 1))
         y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(torch.cat(y, 1))
+        output = self.cv2(torch.cat(y, 1))
+
+        self.calculation_li = []
+        self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
+        for name, module in self.m.named_children():
+          self.calculation_li = self.calculation_li + module.calculation_li
+
+        return output
 
     def forward_split(self, x):
         """Forward pass using split() instead of chunk()."""
@@ -263,24 +267,47 @@ class C2f(nn.Module):
 class SC2f(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):
+    def __init__(self, c1, c2, spk_conv_li, n=1, shortcut=False, calculation=False, g=1, e=0.5):
         """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
         expansion.
         """
         super().__init__()
         self.c = int(c2 * e)  # hidden channels
-        self.cv1 = SConv(c1, 2 * self.c, 1, 1)
-        self.cv2 = SConv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(SBottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        #self.calculation = False
+
+        # Conversion of first conv layer
+        if 0 in spk_conv_li:
+          print("SC2f-1 : SConv_spike")
+          self.cv1 = SConv(c1, 2 * self.c, 1, 1, calculation)
+        else:
+          print("SC2f-1 : Conv")
+          self.cv1 = Conv(c1, 2 * self.c, 1, 1, calculation)
+
+        # Conversion of last conv layer
+        if 1 in spk_conv_li:
+          print("SC2f-2 : SConv_spike")
+          self.cv2 = SConv((2 + n) * self.c, c2, 1, 1, calculation)  # optional act=FReLU(c2)
+        else:
+          print("SC2f-2 : Conv")
+          self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation)
+
+        # Conversion of Bottleneck's conv layers
+        self.m = nn.ModuleList(
+          SBottleneck(self.c, self.c, spk_conv_li[j + 1], shortcut, calculation, g, k=((3, 3), (3, 3)), e=1.0) for j in range(n))
+
+        self.calculation = calculation
 
     def forward(self, x):
-        #if self.calculation == True:
-          #print("#=====SC2f Block=====#")
         """Forward pass through C2f layer."""
         y = list(self.cv1(x).chunk(2, 1))
         y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(torch.cat(y, 1))
+        output = self.cv2(torch.cat(y, 1))
+
+        self.calculation_li = []
+        self.calculation_li = self.cv1.calculation_li + self.cv2.calculation_li
+        for name, module in self.m.named_children():
+          self.calculation_li = self.calculation_li + module.calculation_li
+
+        return output
 
     def forward_split(self, x):
         """Forward pass using split() instead of chunk()."""
@@ -320,12 +347,17 @@ class SC2f_spike(nn.Module):
     self.calculation = calculation
 
   def forward(self, x):
-    if self.calculation == True:
-      print("#=====SC2f_spike Block=====#")
     """Forward pass through C2f layer."""
     y = list(self.cv1(x).chunk(2, 1))
     y.extend(m(y[-1]) for m in self.m)
-    return self.cv2(torch.cat(y, 1))
+    output = self.cv2(torch.cat(y, 1))
+
+    self.calculation_li = []
+    self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
+    for name, module in self.m.named_children():
+      self.calculation_li = self.calculation_li + module.calculation_li
+
+    return output
 
   def forward_split(self, x):
     """Forward pass using split() instead of chunk()."""
@@ -365,12 +397,17 @@ class SC2f_AT(nn.Module):
     self.calculation = calculation
 
   def forward(self, x):
-    if self.calculation == True:
-      print("#=====SC2f_spike Block=====#")
     """Forward pass through C2f layer."""
     y = list(self.cv1(x).chunk(2, 1))
     y.extend(m(y[-1]) for m in self.m)
-    return self.cv2(torch.cat(y, 1))
+    output = self.cv2(torch.cat(y, 1))
+
+    self.calculation_li = []
+    self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
+    for name, module in self.m.named_children():
+      self.calculation_li = self.calculation_li + module.calculation_li
+
+    return output
 
   def forward_split(self, x):
     """Forward pass using split() instead of chunk()."""
@@ -502,30 +539,50 @@ class Bottleneck(nn.Module):
         self.calculation = calculation
 
     def forward(self, x):
-        if self.calculation == True:
-          print("#=====Bottleneck Block=====#")
         """'forward()' applies the YOLO FPN to input data."""
-        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+        output = x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
+        self.calculation_li = []
+        self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
+        return output
 
 class SBottleneck(nn.Module):
     """Standard bottleneck."""
 
-    def __init__(self, c1, c2, shortcut=True ,g=1, k=(3, 3), e=0.5):
+    def __init__(self, c1, c2, spk_conv_li, shortcut=True, calculation=False, g=1, k=(3, 3), e=0.5):
         """Initializes a bottleneck module with given input/output channels, shortcut option, group, kernels, and
         expansion.
         """
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
-        self.cv1 = SConv(c1, c_, k[0], 1)
-        self.cv2 = SConv(c_, c2, k[1], 1 ,g=g)
+
+        # Conversion of first conv layer
+        if 0 in spk_conv_li:
+          print("SBottleneck-1 : SConv")
+          self.cv1 = SConv(c1, c_, k[0], 1, calculation)
+        else:
+          print("SBottleneck-1 : Conv")
+          self.cv1 = Conv(c1, c_, k[0], 1, calculation)
+
+        # Conversion of last conv layer
+        if 1 in spk_conv_li:
+          print("SBottleneck-2 : SConv")
+          self.cv2 = SConv(c_, c2, k[1], 1, calculation, g=g)
+        else:
+          print("SBottleneck-2 : Conv")
+          self.cv2 = Conv(c_, c2, k[1], 1, calculation, g=g)
+
         self.add = shortcut and c1 == c2
-        #self.calculation = calculation
+        self.calculation = calculation
 
     def forward(self, x):
-        #if self.calculation == True:
-        #  print("#=====SBottleneck=====#")
+        output = x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
+        self.calculation_li = []
+        self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
+
         """'forward()' applies the YOLO FPN to input data."""
-        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+        return output
 
 class SBottleneck_spike(nn.Module):
   """Standard bottleneck."""
@@ -557,10 +614,12 @@ class SBottleneck_spike(nn.Module):
     self.calculation = calculation
 
   def forward(self, x):
-    if self.calculation == True:
-      print("#=====SBottleneck_spike Block=====#")
+    output = x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
+    self.calculation_li = []
+    self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
     """'forward()' applies the YOLO FPN to input data."""
-    return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+    return output
 
 class SBottleneck_AT(nn.Module):
   """Standard bottleneck."""
@@ -592,10 +651,12 @@ class SBottleneck_AT(nn.Module):
     self.calculation = calculation
 
   def forward(self, x):
-    if self.calculation == True:
-      print("#=====SBottleneck_spike Block=====#")
+    output = x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
+    self.calculation_li = []
+    self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
     """'forward()' applies the YOLO FPN to input data."""
-    return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+    return output
 
 class BottleneckCSP(nn.Module):
     """CSP Bottleneck https://github.com/WongKinYiu/CrossStagePartialNetworks."""
@@ -687,11 +748,12 @@ class Upsample(Module):
                            recompute_scale_factor=self.recompute_scale_factor)
 
     # upsample 계층 연산 횟수 측정
+    self.calculation_li = []
     if self.calculation == True:
-      print("#=====Upsample Block=====#")
       upsample_syops = upsample_syops_counter_hook(self, input, output)
-      print("upsample : {}".format(upsample_syops))
-
+      self.calculation_li = [upsample_syops]
+    else:
+      self.calculation_li = [0]
     return output
 
   def extra_repr(self) -> str:

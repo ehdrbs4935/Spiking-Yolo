@@ -83,6 +83,8 @@ class BaseTrainer:
         self.device = select_device(self.args.device, self.args.batch)
         self.validator = None
         self.metrics = None
+        self.calculations_li = None
+        self.calculations_li_sub = None
         self.plots = {}
         init_seeds(self.args.seed + 1 + RANK, deterministic=self.args.deterministic)
 
@@ -134,6 +136,7 @@ class BaseTrainer:
         self.tloss = None
         self.loss_names = ['Loss']
         self.csv = self.save_dir / 'results.csv'
+        self.calculation_csv = self.save_dir / "calculations.csv"
         self.plot_idx = [0, 1, 2]
 
         # Callbacks
@@ -262,6 +265,10 @@ class BaseTrainer:
             self.validator = self.get_validator()
             metric_keys = self.validator.metrics.keys + self.label_loss_items(prefix='val')
             self.metrics = dict(zip(metric_keys, [0] * len(metric_keys)))
+            # 🧮 self.calculations_li 추가
+            self.calculation_keys = self.model.sub_modules
+            #self.calculations_keys = dict(zip(calculation_keys, [0] * len(calculation_keys)))
+
             self.ema = ModelEMA(self.model)
             if self.args.plots:
                 self.plot_training_labels()
@@ -307,6 +314,8 @@ class BaseTrainer:
             self.plot_idx.extend([base_idx, base_idx + 1, base_idx + 2])
         epoch = self.epochs  # predefine for resume fully trained model edge cases
         for epoch in range(self.start_epoch, self.epochs):
+            # For each epoch, initialize self.calculations_li
+            self.calculations_li = None
             self.epoch = epoch
             self.run_callbacks('on_train_epoch_start')
             self.model.train()
@@ -341,6 +350,11 @@ class BaseTrainer:
                 with torch.cuda.amp.autocast(self.amp):
                     batch = self.preprocess_batch(batch)
                     self.loss, self.loss_items = self.model(batch)
+                    if self.calculations_li == None:
+                      self.calculations_li = self.model.calculation_li
+                    else:
+                      self.calculations_li = [x + y for x, y in zip(self.calculations_li, self.model.calculation_li)]
+
                     if RANK != -1:
                         self.loss *= world_size
                     self.tloss = (self.tloss * i + self.loss_items) / (i + 1) if self.tloss is not None \
@@ -377,6 +391,9 @@ class BaseTrainer:
                         self.plot_training_samples(batch, ni)
 
                 self.run_callbacks('on_train_batch_end')
+
+            # Save calculations_li
+            self.save_calculations(calculations_li=dict(zip(self.calculation_keys, self.calculations_li)))
 
             self.lr = {f'lr/pg{ir}': x['lr'] for ir, x in enumerate(self.optimizer.param_groups)}  # for loggers
             self.run_callbacks('on_train_epoch_end')
@@ -555,6 +572,14 @@ class BaseTrainer:
         n = len(metrics) + 1  # number of cols
         s = '' if self.csv.exists() else (('%23s,' * n % tuple(['epoch'] + keys)).rstrip(',') + '\n')  # header
         with open(self.csv, 'a') as f:
+            f.write(s + ('%23.5g,' * n % tuple([self.epoch + 1] + vals)).rstrip(',') + '\n')
+
+    def save_calculations(self, calculations_li):
+        """Saves training calculations to a CSV file."""
+        keys, vals = list(calculations_li.keys()), list(calculations_li.values())
+        n = len(calculations_li) + 1 # number of cols
+        s = '' if self.calculation_csv.exists() else (('%23s,' * n % tuple(['epoch'] + keys)).rstrip(',') + '\n')  # header
+        with open(self.calculation_csv, 'a') as f:
             f.write(s + ('%23.5g,' * n % tuple([self.epoch + 1] + vals)).rstrip(',') + '\n')
 
     def plot_metrics(self):

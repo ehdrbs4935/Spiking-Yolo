@@ -47,10 +47,10 @@ def conv_syops_counter_hook(conv_module, input, output, name="layer"):
     # overall_syops : ANN에서의 연산 횟수
 
     if spike:
-        print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(overall_syops) * rate))
+        #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(overall_syops) * rate))
         return int(overall_syops) * rate
     else:
-        print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(overall_syops)))
+        #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(overall_syops)))
         return int(overall_syops)
     '''
     conv_module.__syops__[0] += int(overall_syops)
@@ -76,11 +76,11 @@ def bn_syops_counter_hook(module, input, output, name="layer"):
 
     if spike:
         #module.__syops__[1] += int(batch_syops) * rate
-        print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(batch_syops) * rate))
+        #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(batch_syops) * rate))
         return int(batch_syops) * rate
     else:
         #module.__syops__[2] += int(batch_syops)
-        print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(batch_syops)))
+        #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(batch_syops)))
         return int(batch_syops)
 
     module.__syops__[3] += rate * 100
@@ -116,11 +116,11 @@ def pool_syops_counter_hook(module, input, output, name="layer"):
 
     if spike:
         #module.__syops__[1] += int(np.prod(input.shape)) * rate
-        print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(np.prod(input.shape)) * rate))
+        #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(np.prod(input.shape)) * rate))
         return int(np.prod(input.shape)) * rate
     else:
         #module.__syops__[2] += int(np.prod(input.shape))
-        print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(np.prod(input.shape))))
+        #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(np.prod(input.shape))))
         return int(np.prod(input.shape))
 
     module.__syops__[3] += rate * 100
@@ -141,7 +141,7 @@ def IF_syops_counter_hook(module, input, output, name="layer"):
   module.__syops__[1] += int(active_elements_count)
   module.__syops__[3] += rate * 100
   '''
-  print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(active_elements_count) * rate))
+  #print("{}, spike: {}, rate: {}, calculation: {}".format(name, spike, rate, int(active_elements_count) * rate))
   return int(active_elements_count)
 
 
@@ -155,7 +155,7 @@ def LIF_syops_counter_hook(module, input, output):
     return int(active_elements_count)
 
 def Leaky_syops_counter_hook(module, input, name="layer"):
-  print("{}, spike: {}, rate: {}, calculation: {}".format(name, False, None, int(torch.count_nonzero(input))))
+  #print("{}, spike: {}, rate: {}, calculation: {}".format(name, False, None, int(torch.count_nonzero(input))))
   return int(torch.count_nonzero(input))
 
 
@@ -163,5 +163,5 @@ def silu_flops_counter_hook(module, input, output, name="layer"):
   # active_elements_count = output.numel()
   active_elements_count = input.numel()
   # module.__flops__ += int(active_elements_count)
-  print("{}, spike: {}, rate: {}, calculation: {}".format(name, False, 1, int(active_elements_count) * 5))
+  #print("{}, spike: {}, rate: {}, calculation: {}".format(name, False, 1, int(active_elements_count) * 5))
   return int(active_elements_count) * 5

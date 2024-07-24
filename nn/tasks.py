@@ -72,13 +72,15 @@ class BaseModel(nn.Module):
         Returns:
             (torch.Tensor): The last output of the model.
         """
-        y, dt, embeddings = [], [], []  # outputs
+        y, dt, embeddings, calculation_li = [], [], [], []  # outputs
         for m in self.model:
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
             x = m(x)  # run
+            calculation_li = calculation_li + m.calculation_li
+
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
@@ -86,6 +88,7 @@ class BaseModel(nn.Module):
                 embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
                 if m.i == max(embed):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
+        self.calculation_li = calculation_li
         return x
 
     def _predict_augment(self, x):
@@ -235,12 +238,8 @@ class DetectionModel(BaseModel):
         if nc and nc != self.yaml['nc']:
             LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml['nc'] = nc  # override YAML value
-        self.model, self.save = parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
-        #print("Detection model")
-        #print(self.model)
+        self.model, self.save, self.sub_modules = parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
         self.names = {i: f'{i}' for i in range(self.yaml['nc'])}  # default names dict
-        #print("Detection model names")
-        #print(self.names)
         self.inplace = self.yaml.get('inplace', True)
 
         # Build strides
@@ -705,10 +704,10 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 c2 = make_divisible(min(c2, max_channels) * width, 8)
 
             args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, SC2f, C3, C3TR, C3Ghost, C3x, RepC3):
+            if m in (BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, C3x, RepC3):
                 args.insert(2, n)  # number of repeats
                 n = 1
-            if m in (SC2f_spike, SC2f_AT):
+            if m in (SC2f, SC2f_spike, SC2f_AT):
               args.insert(3, n)
               n = 1
         elif m is AIFI:
@@ -745,7 +744,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             ch = []
         ch.append(c2)
 
-    print("⭐⭐⭐⭐⭐️Names of Layers⭐⭐⭐⭐⭐")
+    #⭐⭐⭐⭐⭐️Names of Layers⭐⭐⭐⭐⭐
     names = []
     for i in range(len(layers)):
       get_leaf_modules(layers[i], i, names)

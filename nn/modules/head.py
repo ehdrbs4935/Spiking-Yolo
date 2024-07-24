@@ -43,7 +43,9 @@ class Detect(nn.Module):
 
         self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
 
+
     def forward(self, x):
+        self.calculation_li = [0] * 43
         """Concatenates and returns predicted bounding boxes and class probabilities."""
         shape = x[0].shape  # BCHW
         for i in range(self.nl):
@@ -72,6 +74,7 @@ class Detect(nn.Module):
             dbox /= img_size
 
         y = torch.cat((dbox, cls.sigmoid()), 1)
+
         return y if self.export else (y, x)
 
     def bias_init(self):
