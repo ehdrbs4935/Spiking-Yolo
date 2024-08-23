@@ -73,6 +73,10 @@ class BaseModel(nn.Module):
             (torch.Tensor): The last output of the model.
         """
         y, dt, embeddings, calculation_li = [], [], [], []  # outputs
+        feature_maps_li = [] # feature map
+        idx = 0
+        feature_maps_key = []
+
         for m in self.model:
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
@@ -81,6 +85,34 @@ class BaseModel(nn.Module):
             x = m(x)  # run
             calculation_li = calculation_li + m.calculation_li
 
+            module_name = type(m).__name__
+            if module_name in ('Conv', 'C2f', 'SPPF', 'SConv_spike', 'SC2f_spike'):
+              feature_maps_li = feature_maps_li + m.feature_map
+
+              if module_name == 'Conv' or module_name == 'SConv_spike':
+                feature_maps_key.append(str(idx)+'.'+module_name)
+
+              elif module_name == 'C2f' or module_name == 'SC2f_spike':
+                num_bottleneck = len(list(m.m.children()))
+                if num_bottleneck == 1:
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Conv1')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Bottleneck.Conv1')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Bottleneck.Conv2')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Conv2')
+                elif num_bottleneck == 2:
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Conv1')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Bottleneck1.Conv1')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Bottleneck1.Conv2')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Bottleneck2.Conv1')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Bottleneck2.Conv2')
+                  feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Conv2')
+
+              elif module_name == 'SPPF':
+                feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Conv1')
+                feature_maps_key.append(str(idx) + '.' + module_name + '.' + 'Conv2')
+
+              idx = idx + 1
+
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
@@ -88,7 +120,11 @@ class BaseModel(nn.Module):
                 embeddings.append(nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1))  # flatten
                 if m.i == max(embed):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
+
         self.calculation_li = calculation_li
+        #self.feature_maps_li = feature_maps_li
+        self.feature_maps_dict = dict(zip(feature_maps_key, feature_maps_li))
+
         return x
 
     def _predict_augment(self, x):

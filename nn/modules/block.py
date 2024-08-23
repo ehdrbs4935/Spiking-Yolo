@@ -171,6 +171,8 @@ class SPPF(nn.Module):
       else:
         self.calculation_li.append(0)
 
+      self.feature_map = self.cv1.feature_map + self.cv2.feature_map
+
       return output
       # self.cv2(torch.cat((x, y1, y2, y3), 1))) 호출 결과, "Conv(c_ * 4, c2, 1, 1)" 블록의 forward 함수가 호출되면서 해당 Conv 블록의 conv 및 bn 연산 횟수가 출력된다.
 
@@ -255,6 +257,12 @@ class C2f(nn.Module):
         self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
         for name, module in self.m.named_children():
           self.calculation_li = self.calculation_li + module.calculation_li
+
+        # Feature map
+        self.feature_map = self.cv1.feature_map # Conv1
+        for name, module in self.m.named_children(): # Bottlenecks
+          self.feature_map = self.feature_map + module.feature_map
+        self.feature_map = self.feature_map + self.cv2.feature_map # Conv2
 
         return output
 
@@ -356,6 +364,12 @@ class SC2f_spike(nn.Module):
     self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
     for name, module in self.m.named_children():
       self.calculation_li = self.calculation_li + module.calculation_li
+
+    # Feature map
+    self.feature_map = self.cv1.feature_map  # Conv1
+    for name, module in self.m.named_children():  # Bottlenecks
+      self.feature_map = self.feature_map + module.feature_map
+    self.feature_map = self.feature_map + self.cv2.feature_map  # Conv2
 
     return output
 
@@ -544,6 +558,10 @@ class Bottleneck(nn.Module):
 
         self.calculation_li = []
         self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
+
+        # Feature map
+        self.feature_map = self.cv1.feature_map + self.cv2.feature_map
+
         return output
 
 class SBottleneck(nn.Module):
@@ -619,6 +637,10 @@ class SBottleneck_spike(nn.Module):
     self.calculation_li = []
     self.calculation_li = self.calculation_li + self.cv1.calculation_li + self.cv2.calculation_li
     """'forward()' applies the YOLO FPN to input data."""
+
+    # Feature map
+    self.feature_map = self.cv1.feature_map + self.cv2.feature_map
+
     return output
 
 class SBottleneck_AT(nn.Module):

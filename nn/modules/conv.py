@@ -16,6 +16,9 @@ from snntorch import spikegen
 from ultralytics.nn.modules.calculator import conv_syops_counter_hook, bn_syops_counter_hook, pool_syops_counter_hook, Leaky_syops_counter_hook, silu_flops_counter_hook,IF_syops_counter_hook
 from ultralytics.nn.modules.neuron import AdaptiveIFNode, AdaptiveLIFNode
 
+from matplotlib import pyplot as plt
+import matplotlib.cm as cm
+
 __all__ = ('Conv', 'SConv', 'Conv2', 'LightConv', 'DWConv', 'DWConvTranspose2d', 'ConvTranspose', 'Focus', 'GhostConv',
            'ChannelAttention', 'SpatialAttention', 'CBAM', 'Concat', 'RepConv', 'SConv_spike', 'SConv_AT')
 
@@ -43,7 +46,6 @@ class Conv(nn.Module):
         self.calculation = calculation
 
     def forward(self, x):
-
       y = self.conv(x)
       y2 = self.bn(y)
       z = self.act(y2)
@@ -60,7 +62,13 @@ class Conv(nn.Module):
         self.calculation_li = [conv_syops, bn_syops, silu_syops]
       else:
         self.calculation_li = [0, 0, 0]
-      """Apply convolution, batch normalization and activation to input tensor."""
+
+      #feature_maps = z[0,0:8,:,:].detach() # 앞의 8개 채널에 대한 feature map들만 불러온다.
+      self.feature_map = []
+      #self.feature_map.append(torch.cat([feature_maps[i] for i in range(feature_maps.size(0))], dim=1)) # 3차원 배열을 2차원 배열로 변환한다.
+      feature_maps = z[0].detach()
+      self.feature_map.append(feature_maps.sum(dim=0) / feature_maps.size(0))
+
       return z
 
     def forward_fuse(self, x):
@@ -496,6 +504,11 @@ class SConv_spike(nn.Module):
     self.node.reset()
 
     spk_output = torch.stack(spk_rec).view(-1, shape[0], shape[1], shape[2], shape[3]).sum(0)
+
+    self.feature_map = []
+    # self.feature_map.append(torch.cat([feature_maps[i] for i in range(feature_maps.size(0))], dim=1)) # 3차원 배열을 2차원 배열로 변환한다.
+    feature_maps = spk_output[0].detach()
+    self.feature_map.append(feature_maps.sum(dim=0) / feature_maps.size(0))
 
     return spk_output
 

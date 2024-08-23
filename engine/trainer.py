@@ -32,6 +32,7 @@ from ultralytics.utils.files import get_latest_run
 from ultralytics.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, init_seeds, one_cycle, select_device,
                                            strip_optimizer)
 
+from matplotlib import pyplot as plt
 
 class BaseTrainer:
     """
@@ -265,7 +266,7 @@ class BaseTrainer:
             self.validator = self.get_validator()
             metric_keys = self.validator.metrics.keys + self.label_loss_items(prefix='val')
             self.metrics = dict(zip(metric_keys, [0] * len(metric_keys)))
-            # 🧮 self.calculations_li 추가
+            # 🧮 self.calculations_keys 추가
             self.calculation_keys = self.model.sub_modules
             #self.calculations_keys = dict(zip(calculation_keys, [0] * len(calculation_keys)))
 
@@ -345,7 +346,6 @@ class BaseTrainer:
                             ni, xi, [self.args.warmup_bias_lr if j == 0 else 0.0, x['initial_lr'] * self.lf(epoch)])
                         if 'momentum' in x:
                             x['momentum'] = np.interp(ni, xi, [self.args.warmup_momentum, self.args.momentum])
-
                 # Forward
                 with torch.cuda.amp.autocast(self.amp):
                     batch = self.preprocess_batch(batch)
@@ -354,6 +354,8 @@ class BaseTrainer:
                       self.calculations_li = self.model.calculation_li
                     else:
                       self.calculations_li = [x + y for x, y in zip(self.calculations_li, self.model.calculation_li)]
+                    if epoch == 2:
+                      self.plot_feature_maps(self.model.feature_maps_dict)
 
                     if RANK != -1:
                         self.loss *= world_size
@@ -566,6 +568,19 @@ class BaseTrainer:
         """Plots training labels for YOLO model."""
         pass
 
+    def plot_feature_maps(self, feature_maps_dict):
+      """Plots trained feature maps for YOLO model"""
+      keys, vals = list(feature_maps_dict.keys()), list(feature_maps_dict.values())
+      for i in range(len(feature_maps_dict)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5,1,figsize=(10,10),constrained_layout=True)
+        axes[i % 5].set_title(keys[i])
+        axes[i % 5].imshow(vals[i])
+        if i % 5 == 4:
+          plt.show()
+
+      pass
+
     def save_metrics(self, metrics):
         """Saves training metrics to a CSV file."""
         keys, vals = list(metrics.keys()), list(metrics.values())
@@ -602,6 +617,7 @@ class BaseTrainer:
                     self.metrics = self.validator(model=f)
                     self.metrics.pop('fitness', None)
                     self.run_callbacks('on_fit_epoch_end')
+                
 
     def check_resume(self, overrides):
         """Check if resume checkpoint exists and update arguments accordingly."""
