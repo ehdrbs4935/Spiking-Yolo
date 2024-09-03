@@ -236,14 +236,14 @@ class C2(nn.Module):
 class C2f(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, calculation=False ,g=1, e=0.5):
+    def __init__(self, c1, c2, n=1, shortcut=False, calculation=False, FFT=False, g=1, e=0.5):
         """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
         expansion.
         """
         super().__init__()
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1, calculation)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation)  # optional act=FReLU(c2)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation, FFT)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, calculation ,g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
         self.calculation = calculation
 
@@ -325,7 +325,7 @@ class SC2f(nn.Module):
 
 class SC2f_spike(nn.Module):
   """Faster Implementation of CSP Bottleneck with 2 convolutions."""
-  def __init__(self, c1, c2, spk_conv_li ,n=1, shortcut=False, calculation=False ,g=1, e=0.5):
+  def __init__(self, c1, c2, spk_conv_li ,n=1, shortcut=False, calculation=False, FFT=False, g=1, e=0.5):
     """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
     expansion.
     """
@@ -343,7 +343,7 @@ class SC2f_spike(nn.Module):
     # Conversion of last conv layer
     if 1 in spk_conv_li:
       print("SC2f_spike-2 : SConv_spike")
-      self.cv2 = SConv_spike((2 + n) * self.c, c2, 1, 1, calculation)  # optional act=FReLU(c2)
+      self.cv2 = SConv_spike((2 + n) * self.c, c2, 1, 1, calculation, FFT)  # optional act=FReLU(c2)
     else:
       print("SC2f_spike-2 : Conv")
       self.cv2 = Conv((2 + n) * self.c, c2, 1, 1, calculation)

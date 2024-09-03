@@ -354,7 +354,7 @@ class BaseTrainer:
                       self.calculations_li = self.model.calculation_li
                     else:
                       self.calculations_li = [x + y for x, y in zip(self.calculations_li, self.model.calculation_li)]
-                    if epoch == 9:
+                    if epoch == 0:
                       self.plot_feature_maps(self.model.feature_maps_dict)
 
                     if RANK != -1:

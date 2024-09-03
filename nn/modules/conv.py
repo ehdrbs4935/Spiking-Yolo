@@ -37,15 +37,34 @@ class Conv(nn.Module):
     default_act = nn.SiLU()  # default activation
     #default_act = nn.ReLU()
 
-    def __init__(self, c1, c2, k=1, s=1, calculation=False ,p=None, g=1, d=1, act=True):
+    def __init__(self, c1, c2, k=1, s=1, calculation=False, FFT=False, p=None, g=1, d=1, act=True):
         """Initialize Conv layer with given arguments including activation."""
         super().__init__()
         self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
         self.calculation = calculation
+        self.FFT = FFT
 
     def forward(self, x):
+      # 입력 feature map plot
+      if self.FFT == True:
+        fft_feature_map = np.fft.fft2(x[0].detach(), axes=(1, 2))
+        fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+        fft_amplitude = np.abs(fft_feature_map_shifted)
+        fft_amplitude = np.log(fft_amplitude + 1)
+
+        for i in range(x.size(1)):
+          if i % 5 == 0:
+            fig, axes = plt.subplots(5, 2, figsize=(10, 10), constrained_layout=True)
+          axes[i % 5][0].imshow(x[0, i, :, :].detach())
+          axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+          if i % 5 == 4 or (x.size(1) <=5 and i == x.size(1)-1):
+            plt.show()
+
+        pass
+
       y = self.conv(x)
       y2 = self.bn(y)
       z = self.act(y2)
@@ -68,7 +87,25 @@ class Conv(nn.Module):
       #self.feature_map.append(torch.cat([feature_maps[i] for i in range(feature_maps.size(0))], dim=1)) # 3차원 배열을 2차원 배열로 변환한다.
       feature_maps = z[0].detach()
       self.feature_map.append(feature_maps.sum(dim=0) / feature_maps.size(0))
+      '''
+      # FFT 변환 후, plot
+      if self.FFT == True:
+        fft_feature_map = np.fft.fft2(z[0].detach(), axes=(1,2))
+        fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+        fft_amplitude = np.abs(fft_feature_map_shifted)
+        fft_amplitude = np.log(fft_amplitude + 1)
 
+        for i in range(z.size(1)):
+          if i % 5 == 0:
+            fig, axes = plt.subplots(5, 2, figsize=(10,10), constrained_layout=True)
+          axes[i % 5][0].imshow(z[0,i,:,:].detach())
+          axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+          if i % 5 == 4:
+            plt.show()
+
+        pass
+      '''
       return z
 
     def forward_fuse(self, x):
@@ -435,11 +472,12 @@ class Concat(nn.Module):
 class SConv_spike(nn.Module):
   """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
 
-  def __init__(self, c1, c2, k=1, s=1, calculation=False ,p=None, g=1, d=1, act=True):
+  def __init__(self, c1, c2, k=1, s=1, calculation=False ,FFT=False, p=None, g=1, d=1, act=True):
     """Initialize Conv layer with given arguments including activation."""
     super().__init__()
     self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
     self.bn = nn.BatchNorm2d(c2)
+    self.act = nn.SiLU()
 
     variables = {}
 
@@ -449,7 +487,8 @@ class SConv_spike(nn.Module):
         variable, value = row
         variables[variable.strip()] = value.strip()
 
-    self.timestep = int(variables['time-step'])
+    #self.timestep = int(variables['time-step'])
+    self.timestep = 1
 
     # Spiking 뉴런 추가
     neuron_name = variables['neuron']
@@ -461,16 +500,169 @@ class SConv_spike(nn.Module):
         raise ValueError("Non defined neuron")
 
     self.calculation = calculation
+    self.FFT = FFT
 
   def forward(self, x):
     if self.calculation == True:
       self.calculation_li = []
 
+    # 입력 feature map(원본) plot
+    '''
+    if self.FFT == True:
+      fft_feature_map = np.fft.fft2(x[0].detach(), axes=(1, 2))
+      fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+      fft_amplitude = np.abs(fft_feature_map_shifted)
+      fft_amplitude = np.log(fft_amplitude + 1)
+
+      for i in range(x.size(1)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5, 2, figsize=(10, 10), constrained_layout=True)
+        axes[i % 5][0].imshow(x[0, i, :, :].detach())
+        axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+        if i % 5 == 4 or (x.size(1) <= 5 and i == x.size(1) - 1):
+          plt.show()
+
+      pass
+    '''
     spk_rec = []  # record output spikes
 
     # generate spikes from input data (x)
     spikes = spikegen.rate(x, num_steps=self.timestep)
 
+    # 입력 feature map(스파이크) plot
+    '''
+    if self.FFT == True:
+      fft_feature_map = np.fft.fft2(spikes[0,0,:,:].detach(), axes=(1, 2))
+      fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+      fft_amplitude = np.abs(fft_feature_map_shifted)
+      fft_amplitude = np.log(fft_amplitude + 1)
+
+      for i in range(spikes.size(2)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5, 2, figsize=(10, 10), constrained_layout=True)
+        axes[i % 5][0].imshow(spikes[0, 0, i, :, :].detach())
+        axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+        if i % 5 == 4 or (x.size(1) <= 5 and i == x.size(1) - 1):
+          plt.show()
+
+      pass
+    '''
+    # 스파이크로 변경하고자 하는 채널 리스트
+    #change_list = [0, 3, 4, 6, 8, 11, 12, 13] # 대비가 명확하지 않은 채널 (정보의 손실이 클 것으로 예상됨.)
+    #change_list = [1, 2, 5, 7, 9, 10, 14, 15] # 대비가 명확한 채널 (정보 손실이 크지 않을 것으로 예상됨.)
+    #change_list = [0, 2, 3, 4, 6, 8, 9, 11 ]  # 주파수 분포가 고른 채널
+    change_list = [1, 5, 7, 10, 12, 13, 14, 15]  # 주파수 분포가 고르지 않은 채널
+
+    for idx in change_list:
+      x[0,idx,:,:] = spikes[0,0,idx,:,:]
+
+    # 변환한 입력 feature map plot
+    if self.FFT == True:
+      fft_feature_map = np.fft.fft2(x[0].detach(), axes=(1, 2))
+      fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+      fft_amplitude = np.abs(fft_feature_map_shifted)
+      fft_amplitude = np.log(fft_amplitude + 1)
+
+      for i in range(x.size(1)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5, 2, figsize=(10, 10), constrained_layout=True)
+        axes[i % 5][0].imshow(x[0, i, :, :].detach())
+        axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+        if i % 5 == 4 or (x.size(1) <= 5 and i == x.size(1) - 1):
+          plt.show()
+
+      pass
+
+
+    # z : 원본 입력 feature map에 대한 forward 결과
+    y = self.conv(x)
+    y2 = self.bn(y)
+    z = self.act(y2)
+
+    # spk_output : feature map(스파이크)에 대한 forward 결과
+    for t in range(self.timestep):
+      #cur_conv = self.conv(spikes[t])
+      cur_conv = self.conv(x)
+      # spk_conv, mem_conv = self.lif_conv(cur_conv, mem_conv)
+      cur_bn = self.bn(cur_conv)
+      # spk_bn, mem_bn = self.lif_bn(cur_bn, mem_bn)
+      spk_bn = self.node(cur_bn)
+
+      spk_rec.append(spk_bn)  # record spikes
+
+    shape = cur_bn.size()
+    self.node.reset()
+
+    spk_output = torch.stack(spk_rec).view(-1, shape[0], shape[1], shape[2], shape[3]).sum(0)
+
+
+    # 출력 feater map plot
+    '''
+    if self.FFT == True:
+      fft_feature_map = np.fft.fft2(z[0].detach(), axes=(1, 2))
+      fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+      fft_amplitude = np.abs(fft_feature_map_shifted)
+      fft_amplitude = np.log(fft_amplitude + 1)
+
+      for i in range(z.size(1)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5, 2, figsize=(10, 10), constrained_layout=True)
+        axes[i % 5][0].imshow(z[0, i, :, :].detach())
+        axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+        if i % 5 == 4 or (x.size(1) <= 5 and i == x.size(1) - 1):
+          plt.show()
+
+      pass
+    '''
+    if self.calculation == True:
+      # conv 계층 연산 횟수 측정
+      conv_syops = conv_syops_counter_hook(self.conv, spikes[t], cur_conv, "sconv_conv")
+      # lif_conv(Leaky) 계층 연산 횟수 측정
+      # lif_conv_syops = Leaky_syops_counter_hook(self.lif_conv, cur_conv, "sconv_lif_conv")
+      # bn 계층 연산 횟수 측정
+      bn_syops = bn_syops_counter_hook(self.bn, cur_conv, cur_bn, "sconv_bn")
+      # lif_bn(Leaky) 계층 연산 횟수 측정
+      node_syops = IF_syops_counter_hook(self.node, cur_bn, "sconv_node")
+
+      if len(self.calculation_li) == 0:
+        self.calculation_li = [conv_syops, bn_syops, node_syops]
+      else:
+        self.calculation_li[0] = self.calculation_li[0] + conv_syops
+        self.calculation_li[1] = self.calculation_li[0] + bn_syops
+        self.calculation_li[2] = self.calculation_li[0] + node_syops
+    else:
+      self.calculation_li = [0, 0, 0]
+
+    # feature_maps = z[0,0:8,:,:].detach() # 앞의 8개 채널에 대한 feature map들만 불러온다.
+    self.feature_map = []
+    # self.feature_map.append(torch.cat([feature_maps[i] for i in range(feature_maps.size(0))], dim=1)) # 3차원 배열을 2차원 배열로 변환한다.
+    feature_maps = spk_output[0].detach()
+    self.feature_map.append(feature_maps.sum(dim=0) / feature_maps.size(0))
+    '''
+    # FFT 변환 후, plot
+    if self.FFT == True:
+      fft_feature_map = np.fft.fft2(z[0].detach(), axes=(1,2))
+      fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+      fft_amplitude = np.abs(fft_feature_map_shifted)
+      fft_amplitude = np.log(fft_amplitude + 1)
+
+      for i in range(z.size(1)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5, 2, figsize=(10,10), constrained_layout=True)
+        axes[i % 5][0].imshow(z[0,i,:,:].detach())
+        axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+        if i % 5 == 4:
+          plt.show()
+
+      pass
+    '''
+    return spk_output
+    '''
     # input spikes during self.timestep
     for t in range(self.timestep):
       cur_conv = self.conv(spikes[t])
@@ -510,8 +702,27 @@ class SConv_spike(nn.Module):
     feature_maps = spk_output[0].detach()
     self.feature_map.append(feature_maps.sum(dim=0) / feature_maps.size(0))
 
-    return spk_output
+    
+    # FFT 변환 후, plot
+    if self.FFT == True:
+      fft_feature_map = np.fft.fft2(spk_output[0].detach(), axes=(1, 2))
+      fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
+      fft_amplitude = np.abs(fft_feature_map_shifted)
+      fft_amplitude = np.log(fft_amplitude + 1)
 
+      for i in range(spk_output.size(1)):
+        if i % 5 == 0:
+          fig, axes = plt.subplots(5, 2, figsize=(10, 10), constrained_layout=True)
+        axes[i % 5][0].imshow(spk_output[0, i, :, :].detach())
+        axes[i % 5][1].hist(fft_amplitude[i].flatten(), bins=30)
+
+        if i % 5 == 4:
+          plt.show()
+
+      pass
+    
+    return spk_output
+    '''
 class SConv_AT(nn.Module):
   """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
 
