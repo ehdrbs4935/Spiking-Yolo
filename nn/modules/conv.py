@@ -19,6 +19,8 @@ from ultralytics.nn.modules.neuron import AdaptiveIFNode, AdaptiveLIFNode
 from matplotlib import pyplot as plt
 import matplotlib.cm as cm
 
+from ultralytics.nn.modules.utils import spectral_flatness
+
 __all__ = ('Conv', 'SConv', 'Conv2', 'LightConv', 'DWConv', 'DWConvTranspose2d', 'ConvTranspose', 'Focus', 'GhostConv',
            'ChannelAttention', 'SpatialAttention', 'CBAM', 'Concat', 'RepConv', 'SConv_spike', 'SConv_AT')
 
@@ -525,6 +527,32 @@ class SConv_spike(nn.Module):
 
       pass
     '''
+
+    if self.FFT == True:
+        fft_feature_maps = np.fft.fft2(x.detach().cpu(), axes=(2, 3))  # 배치에 포함된 모든 이미지와 모든 채널에 대해서 fft 변환을 수행
+        fft_feature_maps_shifted = np.fft.fftshift(fft_feature_maps)
+        fft_amplitudes = np.abs(fft_feature_maps_shifted)
+
+        fft_amplitudes = fft_amplitudes.reshape(x.size(0), x.size(1),
+                                                x.size(2) * x.size(3))  # 각 채널의 2차원 형태의 feature map 값을 1차원 형태로 합침.
+        flatness_arr = spectral_flatness(fft_amplitudes)
+        sort_arr = np.sort(flatness_arr)
+        threshold_arr = sort_arr[:, sort_arr.shape[1] // 2]
+        threshold_arr = threshold_arr.reshape(len(threshold_arr), 1)
+        top_idx_arr = np.where(flatness_arr >= threshold_arr)[1]
+        top_idx_arr = top_idx_arr.reshape(sort_arr.shape[0], -1)  # 상위 50% 지수
+        bottom_idx_arr = np.where(flatness_arr < threshold_arr)[1]
+        bottom_idx_arr = bottom_idx_arr.reshape(sort_arr.shape[0], -1)  # 상위 50% 지수
+
+        print("-----------FLATNESS-----------")
+        print(flatness_arr)
+        print("-----------threholds-----------")
+        print(threshold_arr)
+        print("-----------Top 50% index -----------")
+        print(top_idx_arr)
+        print("-----------Bottom 50% index -----------")
+        print(bottom_idx_arr)
+
     spk_rec = []  # record output spikes
 
     # generate spikes from input data (x)
@@ -550,6 +578,7 @@ class SConv_spike(nn.Module):
       pass
     '''
     # 스파이크로 변경하고자 하는 채널 리스트
+    '''
     #change_list = [0, 3, 4, 6, 8, 11, 12, 13] # 대비가 명확하지 않은 채널 (정보의 손실이 클 것으로 예상됨.)
     #change_list = [1, 2, 5, 7, 9, 10, 14, 15] # 대비가 명확한 채널 (정보 손실이 크지 않을 것으로 예상됨.)
     #change_list = [0, 2, 3, 4, 6, 8, 9, 11 ]  # 주파수 분포가 고른 채널
@@ -557,8 +586,12 @@ class SConv_spike(nn.Module):
 
     for idx in change_list:
       x[0,idx,:,:] = spikes[0,0,idx,:,:]
-
+    '''
+    for row in range(bottom_idx_arr.shape[0]):
+        for col in range(bottom_idx_arr.shape[1]):
+            x[row, col, :, :] = spikes[0, row, col, :, :]
     # 변환한 입력 feature map plot
+    '''
     if self.FFT == True:
       fft_feature_map = np.fft.fft2(x[0].detach(), axes=(1, 2))
       fft_feature_map_shifted = np.fft.fftshift(fft_feature_map)
@@ -575,7 +608,7 @@ class SConv_spike(nn.Module):
           plt.show()
 
       pass
-
+    '''
 
     # z : 원본 입력 feature map에 대한 forward 결과
     y = self.conv(x)
