@@ -78,3 +78,18 @@ def multi_scale_deformable_attn_pytorch(value: torch.Tensor, value_spatial_shape
     output = ((torch.stack(sampling_value_list, dim=-2).flatten(-2) * attention_weights).sum(-1).view(
         bs, num_heads * embed_dims, num_queries))
     return output.transpose(1, 2).contiguous()
+
+
+def spectral_flatness(fft_amplitudes):
+    # 분자 값
+    log_amplitudes = np.log(fft_amplitudes)
+    avg_log_amplitudes = log_amplitudes.mean(axis=2) # 각 feature map 별 평균값
+    exp_log_amplitudes = np.exp(avg_log_amplitudes)
+
+    # 분모 값
+    avg_amplitudes = fft_amplitudes.mean(axis=2)
+
+    flatness = exp_log_amplitudes / avg_amplitudes
+    # flatness의 크기는 [이미지 개수, 채널 개수] 이며, feature map의 spectral flatness 값이 저장됨.
+
+    return flatness

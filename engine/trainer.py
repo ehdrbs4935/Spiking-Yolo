@@ -354,8 +354,8 @@ class BaseTrainer:
                       self.calculations_li = self.model.calculation_li
                     else:
                       self.calculations_li = [x + y for x, y in zip(self.calculations_li, self.model.calculation_li)]
-                    if epoch == 0:
-                      self.plot_feature_maps(self.model.feature_maps_dict)
+                    #if epoch == 0:
+                      #self.plot_feature_maps(self.model.feature_maps_dict)
 
                     if RANK != -1:
                         self.loss *= world_size
@@ -575,7 +575,7 @@ class BaseTrainer:
         if i % 5 == 0:
           fig, axes = plt.subplots(5,1,figsize=(10,10),constrained_layout=True)
         axes[i % 5].set_title(keys[i])
-        axes[i % 5].imshow(vals[i])
+        axes[i % 5].imshow(vals[i].cpu())
         if i % 5 == 4:
           plt.show()
 
